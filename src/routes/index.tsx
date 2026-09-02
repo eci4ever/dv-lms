@@ -77,7 +77,7 @@ function Home() {
 						</a>
 					</nav>
 					<Button asChild variant="ghost" className="text-slate-200">
-						<a href="#sign-in">
+						<a href="/login">
 							Sign in <ArrowRight />
 						</a>
 					</Button>
