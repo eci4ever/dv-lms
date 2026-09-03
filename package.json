@@ -13,9 +13,12 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.7.2",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.1.18",
     "@tanstack/react-devtools": "latest",
@@ -25,8 +28,10 @@
     "@tanstack/react-router-devtools": "latest",
     "@tanstack/react-router-ssr-query": "latest",
     "@tanstack/react-start": "latest",
+    "better-auth": "^1.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.38.0",
     "radix-ui": "^1.6.7",
     "react": "^19.2.0",
@@ -39,6 +44,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
     "@cloudflare/vite-plugin": "^1.26.0",
+    "@cloudflare/workers-types": "^5.20260902.1",
     "@rolldown/plugin-babel": "^0.2.3",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/router-cli": "^1.132.0",
@@ -47,8 +53,10 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "^1.0.0",
+    "drizzle-kit": "^0.31.10",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
+    "vitest": "^4.1.11",
     "wrangler": "^4.70.0"
   },
   "pnpm": {

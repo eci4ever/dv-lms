@@ -3,6 +3,7 @@ import {
 	ArrowRight,
 	Check,
 	GitFork,
+	LoaderCircle,
 	LockKeyhole,
 } from "lucide-react";
 import { useState } from "react";
@@ -11,18 +12,50 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authClient } from "@/lib/auth-client";
 
 type AuthPageProps = {
 	mode: "login" | "signup";
 };
 
 export function AuthPage({ mode }: AuthPageProps) {
-	const [submitted, setSubmitted] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const [isPending, setIsPending] = useState(false);
+	const [rememberMe, setRememberMe] = useState(true);
+	const [termsAccepted, setTermsAccepted] = useState(false);
 	const isSignup = mode === "signup";
 
-	function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		setSubmitted(true);
+		setError(null);
+
+		if (isSignup && !termsAccepted) {
+			setError("Please accept the Terms of Service and Privacy Policy.");
+			return;
+		}
+
+		setIsPending(true);
+		const formData = new FormData(event.currentTarget);
+		const email = String(formData.get("email"));
+		const password = String(formData.get("password"));
+
+		const result = isSignup
+			? await authClient.signUp.email({
+					email,
+					name: String(formData.get("name")),
+					password,
+				})
+			: await authClient.signIn.email({ email, password, rememberMe });
+
+		if (result.error) {
+			setError(
+				result.error.message ?? "Authentication failed. Please try again.",
+			);
+			setIsPending(false);
+			return;
+		}
+
+		window.location.assign("/dashboard");
 	}
 
 	return (
@@ -111,9 +144,10 @@ export function AuthPage({ mode }: AuthPageProps) {
 							className="mt-7 h-11 w-full border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800"
 							variant="outline"
 							type="button"
+							disabled
 						>
 							<GitFork className="size-4" />
-							Continue with GitHub
+							GitHub sign-in coming soon
 						</Button>
 						<div className="my-6 flex items-center gap-3 text-xs text-slate-500">
 							<span className="h-px flex-1 bg-slate-800" />
@@ -128,6 +162,7 @@ export function AuthPage({ mode }: AuthPageProps) {
 									<Input
 										className="h-11 border-slate-700 bg-slate-900/70 placeholder:text-slate-600 focus-visible:border-blue-400"
 										id="name"
+										name="name"
 										placeholder="Ada Lovelace"
 										required
 									/>
@@ -138,6 +173,7 @@ export function AuthPage({ mode }: AuthPageProps) {
 								<Input
 									className="h-11 border-slate-700 bg-slate-900/70 placeholder:text-slate-600 focus-visible:border-blue-400"
 									id="email"
+									name="email"
 									type="email"
 									placeholder="you@example.com"
 									required
@@ -158,6 +194,7 @@ export function AuthPage({ mode }: AuthPageProps) {
 								<Input
 									className="h-11 border-slate-700 bg-slate-900/70 placeholder:text-slate-600 focus-visible:border-blue-400"
 									id="password"
+									name="password"
 									type="password"
 									placeholder="At least 8 characters"
 									minLength={8}
@@ -169,7 +206,10 @@ export function AuthPage({ mode }: AuthPageProps) {
 									<Checkbox
 										className="mt-0.5 border-slate-600 data-[state=checked]:bg-blue-500"
 										id="terms"
-										required
+										checked={termsAccepted}
+										onCheckedChange={(checked) =>
+											setTermsAccepted(checked === true)
+										}
 									/>
 									<Label
 										className="cursor-pointer text-xs leading-5 text-slate-400"
@@ -183,6 +223,10 @@ export function AuthPage({ mode }: AuthPageProps) {
 									<Checkbox
 										className="border-slate-600 data-[state=checked]:bg-blue-500"
 										id="remember-me"
+										checked={rememberMe}
+										onCheckedChange={(checked) =>
+											setRememberMe(checked === true)
+										}
 									/>
 									<Label
 										className="cursor-pointer text-sm text-slate-400"
@@ -195,16 +239,24 @@ export function AuthPage({ mode }: AuthPageProps) {
 							<Button
 								className="h-11 w-full bg-blue-500 text-white shadow-lg shadow-blue-500/20 hover:bg-blue-400"
 								type="submit"
+								disabled={isPending}
 							>
-								{isSignup ? "Create free account" : "Sign in"}
-								<ArrowRight className="size-4" />
+								{isPending ? (
+									<LoaderCircle className="size-4 animate-spin" />
+								) : (
+									<ArrowRight className="size-4" />
+								)}
+								{isPending
+									? "Please wait..."
+									: isSignup
+										? "Create free account"
+										: "Sign in"}
 							</Button>
 						</form>
 
-						{submitted && (
-							<output className="mt-5 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2.5 text-sm text-emerald-200">
-								Mock {isSignup ? "account created" : "sign-in successful"}. No
-								data was sent.
+						{error && (
+							<output className="mt-5 block rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-2.5 text-sm text-red-200">
+								{error}
 							</output>
 						)}
 						<p className="mt-7 text-center text-sm text-slate-400">
