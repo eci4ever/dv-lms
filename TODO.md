@@ -29,9 +29,9 @@ DevLMS is a creator-owned learning platform: every course is produced and manage
 
 ## 4. Course catalogue
 
-- [ ] Add `/courses` catalogue and `/courses/$slug` detail pages
-- [ ] Load catalogue data from the database instead of static course data
-- [ ] Show thumbnails, outcomes, curriculum, level, duration, previews, and pricing
+- [x] Add `/courses` catalogue and `/courses/$slug` detail pages
+- [x] Load catalogue data from the database instead of static course data
+- [x] Show thumbnails, outcomes, curriculum, level, duration, previews, and pricing
 
 ## 5. Better progress tracking
 

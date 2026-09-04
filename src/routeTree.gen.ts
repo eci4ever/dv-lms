@@ -11,10 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
+import { Route as CoursesRouteImport } from './routes/courses'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlatformAdminRouteImport } from './routes/platform-admin'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as CoursesCourseSlugRouteImport } from './routes/courses.$courseSlug'
 import { Route as LearnCourseSlugRouteImport } from './routes/learn.$courseSlug'
 import { Route as PlatformAdminCoursesRouteImport } from './routes/platform-admin_.courses'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -27,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccountRoute = AccountRouteImport.update({
   id: '/account',
   path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoursesRoute = CoursesRouteImport.update({
+  id: '/courses',
+  path: '/courses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -49,6 +56,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoursesCourseSlugRoute = CoursesCourseSlugRouteImport.update({
+  id: '/$courseSlug',
+  path: '/$courseSlug',
+  getParentRoute: () => CoursesRoute,
+} as any)
 const LearnCourseSlugRoute = LearnCourseSlugRouteImport.update({
   id: '/learn/$courseSlug',
   path: '/learn/$courseSlug',
@@ -68,10 +80,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRoute
   '/platform-admin/courses': typeof PlatformAdminCoursesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -79,10 +93,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRoute
   '/platform-admin/courses': typeof PlatformAdminCoursesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -91,10 +107,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
+  '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRoute
   '/platform-admin_/courses': typeof PlatformAdminCoursesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -104,10 +122,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/courses'
     | '/dashboard'
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/courses/$courseSlug'
     | '/learn/$courseSlug'
     | '/platform-admin/courses'
     | '/api/auth/$'
@@ -115,10 +135,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/account'
+    | '/courses'
     | '/dashboard'
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/courses/$courseSlug'
     | '/learn/$courseSlug'
     | '/platform-admin/courses'
     | '/api/auth/$'
@@ -126,10 +148,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/courses'
     | '/dashboard'
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/courses/$courseSlug'
     | '/learn/$courseSlug'
     | '/platform-admin_/courses'
     | '/api/auth/$'
@@ -138,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
+  CoursesRoute: typeof CoursesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   PlatformAdminRoute: typeof PlatformAdminRoute
@@ -161,6 +186,13 @@ declare module '@tanstack/react-router' {
       path: '/account'
       fullPath: '/account'
       preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/courses': {
+      id: '/courses'
+      path: '/courses'
+      fullPath: '/courses'
+      preLoaderRoute: typeof CoursesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -191,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/courses/$courseSlug': {
+      id: '/courses/$courseSlug'
+      path: '/$courseSlug'
+      fullPath: '/courses/$courseSlug'
+      preLoaderRoute: typeof CoursesCourseSlugRouteImport
+      parentRoute: typeof CoursesRoute
+    }
     '/learn/$courseSlug': {
       id: '/learn/$courseSlug'
       path: '/learn/$courseSlug'
@@ -215,9 +254,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface CoursesRouteChildren {
+  CoursesCourseSlugRoute: typeof CoursesCourseSlugRoute
+}
+
+const CoursesRouteChildren: CoursesRouteChildren = {
+  CoursesCourseSlugRoute: CoursesCourseSlugRoute,
+}
+
+const CoursesRouteWithChildren =
+  CoursesRoute._addFileChildren(CoursesRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
+  CoursesRoute: CoursesRouteWithChildren,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   PlatformAdminRoute: PlatformAdminRoute,

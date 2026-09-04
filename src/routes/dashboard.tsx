@@ -131,9 +131,7 @@ function DashboardPage() {
 											asChild
 											className="mt-6 bg-cyan-400 text-slate-950 hover:bg-cyan-300"
 										>
-											<Link hash="course" to="/">
-												Explore courses
-											</Link>
+											<Link to="/courses">Explore courses</Link>
 										</Button>
 									</>
 								)}
