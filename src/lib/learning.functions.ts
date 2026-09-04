@@ -3,7 +3,14 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 
 import { getDatabase } from "@/db";
-import { course, enrollment, lesson, lessonProgress } from "@/db/schema";
+import {
+	certificate,
+	course,
+	enrollment,
+	lesson,
+	lessonProgress,
+	quizAttempt,
+} from "@/db/schema";
 import { getAuth } from "@/lib/auth";
 import {
 	getStudentQuiz,
@@ -55,6 +62,27 @@ async function syncCourseCompletion(userId: string, lessonId: string) {
 		.update(enrollment)
 		.set({ completedAt: isComplete ? new Date() : null })
 		.where(eq(enrollment.id, enrolledCourse.enrollmentId));
+	if (isComplete) {
+		await db
+			.insert(certificate)
+			.values({
+				id: crypto.randomUUID(),
+				verificationId: crypto.randomUUID(),
+				userId,
+				courseId: enrolledCourse.courseId,
+				issuedAt: new Date(),
+			})
+			.onConflictDoNothing();
+	} else {
+		await db
+			.delete(certificate)
+			.where(
+				and(
+					eq(certificate.userId, userId),
+					eq(certificate.courseId, enrolledCourse.courseId),
+				),
+			);
+	}
 }
 
 export const getMyCourses = createServerFn({ method: "GET" }).handler(
@@ -388,6 +416,15 @@ export const submitQuiz = createServerFn({ method: "POST" })
 			throw new Error("Quiz answers are invalid");
 		}
 		const result = gradeQuiz(definition, data.answers);
+		await db.insert(quizAttempt).values({
+			id: crypto.randomUUID(),
+			userId: user.id,
+			lessonId: data.lessonId,
+			score: result.score,
+			passed: result.passed,
+			answers: JSON.stringify(data.answers),
+			createdAt: new Date(),
+		});
 		if (result.passed) {
 			await db
 				.insert(lessonProgress)

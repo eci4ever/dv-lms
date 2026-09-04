@@ -44,9 +44,9 @@ DevLMS is a creator-owned learning platform: every course is produced and manage
 ## 6. Assessments and certificates
 
 - [ ] Add quiz attempt history and practical lab submissions
-- [ ] Define passing rules for courses
-- [ ] Generate certificates with unique verification IDs
-- [ ] Add a public certificate verification page
+- [x] Define passing rules for courses
+- [x] Generate certificates with unique verification IDs
+- [x] Add a public certificate verification page
 
 ## 7. Payments
 

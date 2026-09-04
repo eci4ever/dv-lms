@@ -16,6 +16,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlatformAdminRouteImport } from './routes/platform-admin'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as CertificateVerificationIdRouteImport } from './routes/certificate.$verificationId'
 import { Route as CoursesCourseSlugRouteImport } from './routes/courses.$courseSlug'
 import { Route as LearnCourseSlugRouteImport } from './routes/learn.$courseSlug'
 import { Route as PlatformAdminCoursesRouteImport } from './routes/platform-admin_.courses'
@@ -56,6 +57,12 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CertificateVerificationIdRoute =
+  CertificateVerificationIdRouteImport.update({
+    id: '/certificate/$verificationId',
+    path: '/certificate/$verificationId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CoursesCourseSlugRoute = CoursesCourseSlugRouteImport.update({
   id: '/$courseSlug',
   path: '/$courseSlug',
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/certificate/$verificationId': typeof CertificateVerificationIdRoute
   '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRoute
   '/platform-admin/courses': typeof PlatformAdminCoursesRoute
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/certificate/$verificationId': typeof CertificateVerificationIdRoute
   '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRoute
   '/platform-admin/courses': typeof PlatformAdminCoursesRoute
@@ -112,6 +121,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/certificate/$verificationId': typeof CertificateVerificationIdRoute
   '/courses/$courseSlug': typeof CoursesCourseSlugRoute
   '/learn/$courseSlug': typeof LearnCourseSlugRoute
   '/platform-admin_/courses': typeof PlatformAdminCoursesRoute
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/certificate/$verificationId'
     | '/courses/$courseSlug'
     | '/learn/$courseSlug'
     | '/platform-admin/courses'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/certificate/$verificationId'
     | '/courses/$courseSlug'
     | '/learn/$courseSlug'
     | '/platform-admin/courses'
@@ -153,6 +165,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/certificate/$verificationId'
     | '/courses/$courseSlug'
     | '/learn/$courseSlug'
     | '/platform-admin_/courses'
@@ -167,6 +180,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PlatformAdminRoute: typeof PlatformAdminRoute
   SignupRoute: typeof SignupRoute
+  CertificateVerificationIdRoute: typeof CertificateVerificationIdRoute
   LearnCourseSlugRoute: typeof LearnCourseSlugRoute
   PlatformAdminCoursesRoute: typeof PlatformAdminCoursesRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -223,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/certificate/$verificationId': {
+      id: '/certificate/$verificationId'
+      path: '/certificate/$verificationId'
+      fullPath: '/certificate/$verificationId'
+      preLoaderRoute: typeof CertificateVerificationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/courses/$courseSlug': {
       id: '/courses/$courseSlug'
       path: '/$courseSlug'
@@ -273,6 +294,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PlatformAdminRoute: PlatformAdminRoute,
   SignupRoute: SignupRoute,
+  CertificateVerificationIdRoute: CertificateVerificationIdRoute,
   LearnCourseSlugRoute: LearnCourseSlugRoute,
   PlatformAdminCoursesRoute: PlatformAdminCoursesRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
