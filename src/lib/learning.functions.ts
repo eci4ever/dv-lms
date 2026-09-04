@@ -7,6 +7,7 @@ import {
 	certificate,
 	course,
 	enrollment,
+	labSubmission,
 	lesson,
 	lessonEngagement,
 	lessonProgress,
@@ -455,6 +456,48 @@ export const completeLesson = createServerFn({ method: "POST" })
 			.onConflictDoNothing();
 		await syncCourseCompletion(user.id, data.lessonId);
 
+		return { success: true };
+	});
+
+export const submitLab = createServerFn({ method: "POST" })
+	.validator((data: { lessonId: string; response: string }) => {
+		if (!data.lessonId) throw new Error("Lesson ID is required");
+		const response = data.response.trim();
+		if (response.length < 20)
+			throw new Error("Describe your work in at least 20 characters");
+		if (response.length > 10_000) throw new Error("Lab response is too long");
+		return { lessonId: data.lessonId, response };
+	})
+	.handler(async ({ data }) => {
+		const user = await requireUser();
+		const db = getDatabase();
+		const enrolledLab = await db
+			.select({ contentType: lesson.contentType })
+			.from(lesson)
+			.innerJoin(enrollment, eq(enrollment.courseId, lesson.courseId))
+			.where(and(eq(lesson.id, data.lessonId), eq(enrollment.userId, user.id)))
+			.get();
+		if (!enrolledLab) throw new Error("Course enrollment required");
+		if (enrolledLab.contentType !== "lab")
+			throw new Error("This lesson is not a practical lab");
+
+		await db.insert(labSubmission).values({
+			id: crypto.randomUUID(),
+			userId: user.id,
+			lessonId: data.lessonId,
+			response: data.response,
+			submittedAt: new Date(),
+		});
+		await db
+			.insert(lessonProgress)
+			.values({
+				id: crypto.randomUUID(),
+				userId: user.id,
+				lessonId: data.lessonId,
+				completedAt: new Date(),
+			})
+			.onConflictDoNothing();
+		await syncCourseCompletion(user.id, data.lessonId);
 		return { success: true };
 	});
 

@@ -12,7 +12,7 @@ import {
 } from "@/lib/lesson-content";
 
 export type CourseStatus = "draft" | "published";
-export type LessonContentType = "video" | "article" | "quiz";
+export type LessonContentType = "video" | "article" | "quiz" | "lab";
 
 export type CourseInput = {
 	id?: string;
@@ -102,7 +102,9 @@ function validateCourse(input: CourseInput) {
 
 function validateLesson(input: LessonInput) {
 	if (!input.courseId) throw new Error("Course ID is required");
-	if (!(["video", "article", "quiz"] as const).includes(input.contentType)) {
+	if (
+		!(["video", "article", "quiz", "lab"] as const).includes(input.contentType)
+	) {
 		throw new Error("Invalid lesson content type");
 	}
 
@@ -113,6 +115,9 @@ function validateLesson(input: LessonInput) {
 	let content = input.content.trim() || null;
 	if (input.contentType === "article" && !content) {
 		throw new Error("Article content is required for an article lesson");
+	}
+	if (input.contentType === "lab" && !content) {
+		throw new Error("Lab instructions are required for a lab lesson");
 	}
 	if (input.contentType === "quiz") {
 		content = serializeQuizDefinition(parseQuizDefinition(content));

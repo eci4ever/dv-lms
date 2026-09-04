@@ -30,6 +30,7 @@ import {
 	markLessonIncomplete,
 	recordLessonAccess,
 	recordLessonEngagement,
+	submitLab,
 	submitQuiz,
 } from "@/lib/learning.functions";
 import { getYouTubeEmbedUrl, parseStudentQuiz } from "@/lib/lesson-content";
@@ -283,8 +284,70 @@ function LessonContent({
 	if (lesson.contentType === "article") {
 		return <ArticleContent content={lesson.content} />;
 	}
+	if (lesson.contentType === "lab") {
+		return <LabPlayer lesson={lesson} onSubmitted={onQuizPassed} />;
+	}
 
 	return <VideoContent lesson={lesson} />;
+}
+
+function LabPlayer({
+	lesson,
+	onSubmitted,
+}: {
+	lesson: LearningLesson;
+	onSubmitted: () => Promise<void>;
+}) {
+	const submitLabFn = useServerFn(submitLab);
+	const [response, setResponse] = useState("");
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		setIsSubmitting(true);
+		try {
+			await submitLabFn({ data: { lessonId: lesson.id, response } });
+			await onSubmitted();
+			toast.success("Lab submitted", {
+				description: "Your practical work has been recorded.",
+			});
+		} catch (error) {
+			toast.error("Unable to submit lab", {
+				description:
+					error instanceof Error ? error.message : "Please try again.",
+			});
+		} finally {
+			setIsSubmitting(false);
+		}
+	}
+	return (
+		<div className="space-y-5">
+			<ArticleContent content={lesson.content} />
+			<form
+				className="rounded-2xl border border-cyan-400/20 bg-slate-900/55 p-5"
+				onSubmit={handleSubmit}
+			>
+				<p className="font-mono text-xs tracking-widest text-cyan-400">
+					LAB SUBMISSION
+				</p>
+				<p className="mt-2 text-sm text-slate-400">
+					Describe your result, commands used, evidence, and any external
+					evidence link.
+				</p>
+				<textarea
+					className="mt-4 min-h-40 w-full rounded-lg border border-slate-700 bg-slate-950 p-3 text-sm outline-none focus:border-cyan-400"
+					minLength={20}
+					onChange={(event) => setResponse(event.target.value)}
+					required
+					value={response}
+				/>
+				<div className="mt-4 flex justify-end">
+					<Button disabled={isSubmitting} type="submit">
+						{isSubmitting ? "Submitting..." : "Submit lab"}
+					</Button>
+				</div>
+			</form>
+		</div>
+	);
 }
 
 function VideoContent({ lesson }: { lesson: LearningLesson }) {

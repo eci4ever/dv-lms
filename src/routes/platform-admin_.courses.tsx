@@ -701,6 +701,7 @@ function LessonManager({
 							<option value="video">Video</option>
 							<option value="article">Article</option>
 							<option value="quiz">Quiz</option>
+							<option value="lab">Practical lab</option>
 						</select>
 					</Field>
 					<label className="flex items-end gap-3 pb-1 text-sm">
@@ -748,12 +749,17 @@ function LessonManager({
 							<Label>
 								{lessonDraft.contentType === "article"
 									? "Article content"
-									: "Lesson notes (optional)"}
+									: lessonDraft.contentType === "lab"
+										? "Lab instructions and submission requirements"
+										: "Lesson notes (optional)"}
 							</Label>
 							<textarea
 								className="min-h-36 rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 								onChange={(event) => updateDraft("content", event.target.value)}
-								required={lessonDraft.contentType === "article"}
+								required={
+									lessonDraft.contentType === "article" ||
+									lessonDraft.contentType === "lab"
+								}
 								value={lessonDraft.content}
 							/>
 						</div>
