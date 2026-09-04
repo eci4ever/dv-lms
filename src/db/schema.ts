@@ -202,6 +202,7 @@ export const enrollment = sqliteTable(
 			{ onDelete: "set null" },
 		),
 		lastAccessedAt: integer("lastAccessedAt", { mode: "timestamp_ms" }),
+		completedAt: integer("completedAt", { mode: "timestamp_ms" }),
 		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
 	},
 	(table) => [

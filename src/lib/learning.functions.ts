@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 
 import { getDatabase } from "@/db";
 import { course, enrollment, lesson, lessonProgress } from "@/db/schema";
@@ -18,6 +18,43 @@ async function requireUser() {
 	});
 	if (!session) throw new Error("Authentication required");
 	return session.user;
+}
+
+async function syncCourseCompletion(userId: string, lessonId: string) {
+	const db = getDatabase();
+	const enrolledCourse = await db
+		.select({ courseId: lesson.courseId, enrollmentId: enrollment.id })
+		.from(lesson)
+		.innerJoin(enrollment, eq(enrollment.courseId, lesson.courseId))
+		.where(and(eq(lesson.id, lessonId), eq(enrollment.userId, userId)))
+		.get();
+	if (!enrolledCourse) return;
+
+	const [lessonTotal, completedTotal] = await Promise.all([
+		db
+			.select({ total: count() })
+			.from(lesson)
+			.where(eq(lesson.courseId, enrolledCourse.courseId))
+			.get(),
+		db
+			.select({ total: count() })
+			.from(lessonProgress)
+			.innerJoin(lesson, eq(lessonProgress.lessonId, lesson.id))
+			.where(
+				and(
+					eq(lessonProgress.userId, userId),
+					eq(lesson.courseId, enrolledCourse.courseId),
+				),
+			)
+			.get(),
+	]);
+	const isComplete =
+		(lessonTotal?.total ?? 0) > 0 &&
+		lessonTotal?.total === completedTotal?.total;
+	await db
+		.update(enrollment)
+		.set({ completedAt: isComplete ? new Date() : null })
+		.where(eq(enrollment.id, enrolledCourse.enrollmentId));
 }
 
 export const getMyCourses = createServerFn({ method: "GET" }).handler(
@@ -242,6 +279,34 @@ export const enrollInFreeCourse = createServerFn({ method: "POST" })
 		return { success: true };
 	});
 
+export const markLessonIncomplete = createServerFn({ method: "POST" })
+	.validator((data: { lessonId: string }) => {
+		if (!data.lessonId) throw new Error("Lesson ID is required");
+		return data;
+	})
+	.handler(async ({ data }) => {
+		const user = await requireUser();
+		const db = getDatabase();
+		const enrolledLesson = await db
+			.select({ id: lesson.id })
+			.from(lesson)
+			.innerJoin(enrollment, eq(enrollment.courseId, lesson.courseId))
+			.where(and(eq(lesson.id, data.lessonId), eq(enrollment.userId, user.id)))
+			.get();
+		if (!enrolledLesson) throw new Error("Course enrollment required");
+
+		await db
+			.delete(lessonProgress)
+			.where(
+				and(
+					eq(lessonProgress.userId, user.id),
+					eq(lessonProgress.lessonId, data.lessonId),
+				),
+			);
+		await syncCourseCompletion(user.id, data.lessonId);
+		return { success: true };
+	});
+
 export const completeLesson = createServerFn({ method: "POST" })
 	.validator((data: { lessonId: string }) => {
 		if (!data.lessonId) throw new Error("Lesson ID is required");
@@ -271,6 +336,7 @@ export const completeLesson = createServerFn({ method: "POST" })
 				completedAt: new Date(),
 			})
 			.onConflictDoNothing();
+		await syncCourseCompletion(user.id, data.lessonId);
 
 		return { success: true };
 	});
@@ -332,6 +398,7 @@ export const submitQuiz = createServerFn({ method: "POST" })
 					completedAt: new Date(),
 				})
 				.onConflictDoNothing();
+			await syncCourseCompletion(user.id, data.lessonId);
 		}
 
 		return result;

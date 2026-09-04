@@ -27,6 +27,7 @@ import {
 	completeLesson,
 	enrollInFreeCourse,
 	getMyCourse,
+	markLessonIncomplete,
 	recordLessonAccess,
 	submitQuiz,
 } from "@/lib/learning.functions";
@@ -115,13 +116,16 @@ function LearnPage() {
 	const isComplete = courseData.completedLessonIds.includes(activeLesson.id);
 
 	async function handleCompleteLesson() {
-		if (isComplete) return;
 		setIsCompleting(true);
 		try {
-			await completeLesson({ data: { lessonId: activeLesson.id } });
+			if (isComplete) {
+				await markLessonIncomplete({ data: { lessonId: activeLesson.id } });
+			} else {
+				await completeLesson({ data: { lessonId: activeLesson.id } });
+			}
 			await router.invalidate({ sync: true });
-			toast.success("Lesson completed", {
-				description: "Your course progress has been saved.",
+			toast.success(isComplete ? "Lesson reopened" : "Lesson completed", {
+				description: "Your course progress has been updated.",
 			});
 		} catch (error) {
 			toast.error("Unable to save progress", {
@@ -178,12 +182,14 @@ function LearnPage() {
 							{activeLesson.contentType !== "quiz" && (
 								<Button
 									className="bg-cyan-400 text-slate-950 hover:bg-cyan-300"
-									disabled={isComplete || isCompleting}
+									disabled={isCompleting}
 									onClick={handleCompleteLesson}
 								>
 									<Check className="size-4" />
 									{isComplete
-										? "Completed"
+										? isCompleting
+											? "Saving..."
+											: "Mark incomplete"
 										: isCompleting
 											? "Saving..."
 											: "Mark as complete"}

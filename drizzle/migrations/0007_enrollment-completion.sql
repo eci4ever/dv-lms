@@ -1,0 +1,1 @@
+ALTER TABLE `enrollment` ADD `completedAt` integer;
