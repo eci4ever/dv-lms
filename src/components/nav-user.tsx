@@ -1,5 +1,6 @@
 "use client";
 
+import { Link } from "@tanstack/react-router";
 import {
 	BadgeCheckIcon,
 	BellIcon,
@@ -99,24 +100,26 @@ export function NavUser({
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem className="gap-3 px-3 py-2.5">
+							<DropdownMenuItem className="gap-3 px-3 py-2.5" disabled>
 								<SparklesIcon />
-								Upgrade to Pro
+								Upgrade to Pro (coming soon)
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						<DropdownMenuGroup>
-							<DropdownMenuItem className="gap-3 px-3 py-2.5">
-								<BadgeCheckIcon />
-								Account
+							<DropdownMenuItem asChild className="gap-3 px-3 py-2.5">
+								<Link to="/account">
+									<BadgeCheckIcon />
+									Account
+								</Link>
 							</DropdownMenuItem>
-							<DropdownMenuItem className="gap-3 px-3 py-2.5">
+							<DropdownMenuItem className="gap-3 px-3 py-2.5" disabled>
 								<CreditCardIcon />
-								Billing
+								Billing (coming soon)
 							</DropdownMenuItem>
-							<DropdownMenuItem className="gap-3 px-3 py-2.5">
+							<DropdownMenuItem className="gap-3 px-3 py-2.5" disabled>
 								<BellIcon />
-								Notifications
+								Notifications (coming soon)
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />

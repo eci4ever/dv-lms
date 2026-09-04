@@ -138,11 +138,137 @@ export const invitation = sqliteTable(
 	],
 );
 
+export const course = sqliteTable("course", {
+	id: text("id").primaryKey(),
+	slug: text("slug").notNull().unique(),
+	title: text("title").notNull(),
+	description: text("description").notNull(),
+	priceSen: integer("priceSen").notNull(),
+	duration: text("duration").notNull(),
+	status: text("status", { enum: ["draft", "published"] })
+		.default("draft")
+		.notNull(),
+	thumbnailUrl: text("thumbnailUrl"),
+	publishedAt: integer("publishedAt", { mode: "timestamp_ms" }),
+	createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	updatedAt: integer("updatedAt", { mode: "timestamp_ms" }),
+});
+
+export const lesson = sqliteTable(
+	"lesson",
+	{
+		id: text("id").primaryKey(),
+		courseId: text("courseId")
+			.notNull()
+			.references(() => course.id, { onDelete: "cascade" }),
+		position: integer("position").notNull(),
+		title: text("title").notNull(),
+		description: text("description").notNull(),
+		duration: text("duration").notNull(),
+		contentType: text("contentType", {
+			enum: ["video", "article", "quiz"],
+		})
+			.default("video")
+			.notNull(),
+		videoUrl: text("videoUrl"),
+		content: text("content"),
+		attachmentUrl: text("attachmentUrl"),
+		isPreview: integer("isPreview", { mode: "boolean" })
+			.default(false)
+			.notNull(),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+		updatedAt: integer("updatedAt", { mode: "timestamp_ms" }),
+	},
+	(table) => [
+		uniqueIndex("lesson_courseId_position_uidx").on(
+			table.courseId,
+			table.position,
+		),
+	],
+);
+
+export const enrollment = sqliteTable(
+	"enrollment",
+	{
+		id: text("id").primaryKey(),
+		userId: text("userId")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		courseId: text("courseId")
+			.notNull()
+			.references(() => course.id, { onDelete: "cascade" }),
+		lastAccessedLessonId: text("lastAccessedLessonId").references(
+			() => lesson.id,
+			{ onDelete: "set null" },
+		),
+		lastAccessedAt: integer("lastAccessedAt", { mode: "timestamp_ms" }),
+		createdAt: integer("createdAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [
+		uniqueIndex("enrollment_userId_courseId_uidx").on(
+			table.userId,
+			table.courseId,
+		),
+	],
+);
+
+export const lessonProgress = sqliteTable(
+	"lesson_progress",
+	{
+		id: text("id").primaryKey(),
+		userId: text("userId")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		lessonId: text("lessonId")
+			.notNull()
+			.references(() => lesson.id, { onDelete: "cascade" }),
+		completedAt: integer("completedAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [
+		uniqueIndex("lesson_progress_userId_lessonId_uidx").on(
+			table.userId,
+			table.lessonId,
+		),
+	],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),
 	memberships: many(member),
 	invitations: many(invitation),
+	enrollments: many(enrollment),
+	lessonProgress: many(lessonProgress),
+}));
+
+export const courseRelations = relations(course, ({ many }) => ({
+	lessons: many(lesson),
+	enrollments: many(enrollment),
+}));
+
+export const lessonRelations = relations(lesson, ({ one, many }) => ({
+	course: one(course, { fields: [lesson.courseId], references: [course.id] }),
+	progress: many(lessonProgress),
+}));
+
+export const enrollmentRelations = relations(enrollment, ({ one }) => ({
+	user: one(user, { fields: [enrollment.userId], references: [user.id] }),
+	course: one(course, {
+		fields: [enrollment.courseId],
+		references: [course.id],
+	}),
+	lastAccessedLesson: one(lesson, {
+		fields: [enrollment.lastAccessedLessonId],
+		references: [lesson.id],
+	}),
+}));
+
+export const lessonProgressRelations = relations(lessonProgress, ({ one }) => ({
+	user: one(user, { fields: [lessonProgress.userId], references: [user.id] }),
+	lesson: one(lesson, {
+		fields: [lessonProgress.lessonId],
+		references: [lesson.id],
+	}),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

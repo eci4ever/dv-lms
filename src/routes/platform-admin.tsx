@@ -1,4 +1,10 @@
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+	createFileRoute,
+	Link,
+	redirect,
+	useRouter,
+} from "@tanstack/react-router";
 import { Building2, ShieldCheck, Users } from "lucide-react";
 import { useState } from "react";
 
@@ -20,17 +26,18 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getSession } from "@/lib/auth.functions";
 import { authClient } from "@/lib/auth-client";
 import {
 	deletePlatformOrganization,
 	getPlatformAdminOverview,
 	managePlatformUser,
 } from "@/lib/platform-admin.functions";
+import { sessionQueryKey, sessionQueryOptions } from "@/lib/session.query";
 
 export const Route = createFileRoute("/platform-admin")({
-	beforeLoad: async () => {
-		const session = await getSession();
+	beforeLoad: async ({ context }) => {
+		const session =
+			await context.queryClient.ensureQueryData(sessionQueryOptions);
 		if (!session) throw redirect({ to: "/login" });
 		if (!session.user.role?.split(",").includes("admin")) {
 			throw redirect({ to: "/dashboard" });
@@ -45,6 +52,7 @@ function PlatformAdminPage() {
 	const { user } = Route.useRouteContext();
 	const { users, organizations } = Route.useLoaderData();
 	const router = useRouter();
+	const queryClient = useQueryClient();
 	const [pendingId, setPendingId] = useState<string | null>(null);
 
 	async function runUserAction(
@@ -74,6 +82,7 @@ function PlatformAdminPage() {
 
 	async function handleSignOut() {
 		await authClient.signOut();
+		queryClient.removeQueries({ queryKey: sessionQueryKey });
 		window.location.assign("/login");
 	}
 
@@ -93,7 +102,9 @@ function PlatformAdminPage() {
 								<Breadcrumb>
 									<BreadcrumbList>
 										<BreadcrumbItem className="hidden md:block">
-											<BreadcrumbLink href="/dashboard">DevLMS</BreadcrumbLink>
+											<BreadcrumbLink asChild>
+												<Link to="/dashboard">DevLMS</Link>
+											</BreadcrumbLink>
 										</BreadcrumbItem>
 										<BreadcrumbSeparator className="hidden md:block" />
 										<BreadcrumbItem>

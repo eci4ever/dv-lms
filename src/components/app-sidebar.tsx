@@ -1,19 +1,18 @@
 "use client";
 
+import { Link } from "@tanstack/react-router";
 import {
 	BookOpenIcon,
-	Code2Icon,
-	GaugeIcon,
-	GraduationCapIcon,
-	LibraryIcon,
-	Settings2Icon,
+	BookOpenTextIcon,
+	CompassIcon,
+	LayoutDashboardIcon,
+	NetworkIcon,
 	ShieldCheckIcon,
-	TrophyIcon,
+	UserRoundIcon,
 } from "lucide-react";
 import type * as React from "react";
 
-import { NavMain } from "@/components/nav-main";
-import { NavProjects } from "@/components/nav-projects";
+import { type NavItem, NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
 	Sidebar,
@@ -26,51 +25,33 @@ import {
 	SidebarRail,
 } from "@/components/ui/sidebar";
 
-const navMain = [
+const studentNavigation: NavItem[] = [
 	{
-		title: "Overview",
+		title: "Dashboard",
 		url: "/dashboard",
-		icon: <GaugeIcon />,
-		isActive: true,
-		items: [
-			{ title: "Learning summary", url: "/dashboard" },
-			{ title: "Weekly progress", url: "#progress" },
-		],
+		to: "/dashboard",
+		icon: <LayoutDashboardIcon />,
 	},
 	{
 		title: "My learning",
-		url: "#learning",
+		url: "/dashboard#learning",
+		to: "/dashboard",
+		hash: "learning",
 		icon: <BookOpenIcon />,
-		items: [
-			{ title: "In progress", url: "#learning" },
-			{ title: "Completed", url: "#" },
-			{ title: "Bookmarks", url: "#" },
-		],
 	},
 	{
-		title: "Course library",
-		url: "#",
-		icon: <LibraryIcon />,
-		items: [
-			{ title: "All courses", url: "#" },
-			{ title: "Learning paths", url: "#" },
-		],
+		title: "Explore courses",
+		url: "/#course",
+		to: "/",
+		hash: "course",
+		icon: <CompassIcon />,
 	},
 	{
-		title: "Settings",
-		url: "#",
-		icon: <Settings2Icon />,
-		items: [
-			{ title: "Profile", url: "#" },
-			{ title: "Preferences", url: "#" },
-		],
+		title: "Account",
+		url: "/account",
+		to: "/account",
+		icon: <UserRoundIcon />,
 	},
-];
-
-const learningPaths = [
-	{ name: "Full-Stack TypeScript", url: "#learning", icon: <Code2Icon /> },
-	{ name: "Modern React", url: "#learning", icon: <GraduationCapIcon /> },
-	{ name: "Achievements", url: "#", icon: <TrophyIcon /> },
 ];
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
@@ -86,45 +67,53 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 export function AppSidebar({ user, onSignOut, ...props }: AppSidebarProps) {
 	const navigation = user.role?.split(",").includes("admin")
 		? [
-				...navMain,
+				...studentNavigation,
 				{
 					title: "Platform admin",
 					url: "/platform-admin",
+					to: "/platform-admin" as const,
 					icon: <ShieldCheckIcon />,
-					items: [
-						{ title: "Users", url: "/platform-admin#users" },
-						{ title: "Organizations", url: "/platform-admin#organizations" },
-					],
+				},
+				{
+					title: "Manage courses",
+					url: "/platform-admin/courses",
+					to: "/platform-admin/courses" as const,
+					icon: <BookOpenTextIcon />,
 				},
 			]
-		: navMain;
+		: studentNavigation;
 
 	return (
-		<Sidebar collapsible="icon" {...props}>
-			<SidebarHeader>
+		<Sidebar
+			className="border-slate-800 bg-[#0a1121]"
+			collapsible="icon"
+			{...props}
+		>
+			<SidebarHeader className="p-3">
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton asChild size="lg">
-							<a href="/">
-								<div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-500 text-white shadow-lg shadow-blue-500/20">
-									<Code2Icon className="size-4" />
+						<SidebarMenuButton asChild className="h-12 px-2" size="lg">
+							<Link to="/">
+								<div className="grid size-8 place-items-center rounded-lg bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/20">
+									<NetworkIcon className="size-4" />
 								</div>
-								<div className="grid flex-1 text-left text-sm leading-tight">
-									<span className="truncate font-semibold">DevLMS</span>
-									<span className="truncate text-xs text-sidebar-foreground/60">
-										Learn by building
+								<div className="grid flex-1 text-left leading-tight">
+									<span className="font-semibold tracking-tight">
+										NetLab MY
+									</span>
+									<span className="mt-0.5 text-xs text-sidebar-foreground/55">
+										Practical IT learning
 									</span>
 								</div>
-							</a>
+							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>
 			</SidebarHeader>
-			<SidebarContent>
+			<SidebarContent className="gap-1 px-2">
 				<NavMain items={navigation} />
-				<NavProjects projects={learningPaths} />
 			</SidebarContent>
-			<SidebarFooter>
+			<SidebarFooter className="border-t border-slate-800/80 p-3">
 				<NavUser
 					onSignOut={onSignOut}
 					user={{ ...user, avatar: user.image ?? "" }}

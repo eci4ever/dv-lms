@@ -15,6 +15,41 @@
       "when": 1788331299456,
       "tag": "0001_striped_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788418959046,
+      "tag": "0002_familiar_mesmero",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1788419283377,
+      "tag": "0003_make_network_course_free",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1788442812755,
+      "tag": "0004_add_basic_networking_and_operating_systems_courses",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788443787645,
+      "tag": "0005_course_management",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788489350591,
+      "tag": "0006_enrollment_resume",
+      "breakpoints": true
     }
   ]
 }

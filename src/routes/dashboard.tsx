@@ -1,5 +1,12 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Clock3, Code2, Flame, Play } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import {
+	BookOpen,
+	CheckCircle2,
+	type Clock3,
+	Layers3,
+	Play,
+} from "lucide-react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -18,40 +25,41 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getSession } from "@/lib/auth.functions";
 import { authClient } from "@/lib/auth-client";
+import { getMyCourses } from "@/lib/learning.functions";
+import { sessionQueryKey, sessionQueryOptions } from "@/lib/session.query";
 
 export const Route = createFileRoute("/dashboard")({
-	beforeLoad: async () => {
-		const session = await getSession();
+	beforeLoad: async ({ context }) => {
+		const session =
+			await context.queryClient.ensureQueryData(sessionQueryOptions);
 		if (!session) throw redirect({ to: "/login" });
 		return { user: session.user };
 	},
+	loader: () => getMyCourses(),
 	component: DashboardPage,
 });
 
-const courses = [
-	{
-		title: "Build a Full-Stack TypeScript App",
-		module: "Module 4 · Authentication & Sessions",
-		progress: 68,
-		lessons: "17 of 25 lessons",
-		gradient: "from-blue-500 to-cyan-400",
-	},
-	{
-		title: "Modern React Patterns",
-		module: "Module 2 · Server State",
-		progress: 34,
-		lessons: "8 of 24 lessons",
-		gradient: "from-violet-500 to-fuchsia-400",
-	},
-];
-
 function DashboardPage() {
 	const { user } = Route.useRouteContext();
+	const courses = Route.useLoaderData();
+	const queryClient = useQueryClient();
+	const currentCourse = courses[0];
+	const totalLessons = courses.reduce(
+		(total, item) => total + item.lessonCount,
+		0,
+	);
+	const completedLessons = courses.reduce(
+		(total, item) => total + item.completedLessonCount,
+		0,
+	);
+	const completedCourses = courses.filter(
+		(item) => item.progress === 100,
+	).length;
 
 	async function handleSignOut() {
 		await authClient.signOut();
+		queryClient.removeQueries({ queryKey: sessionQueryKey });
 		window.location.assign("/login");
 	}
 
@@ -71,11 +79,13 @@ function DashboardPage() {
 								<Breadcrumb>
 									<BreadcrumbList>
 										<BreadcrumbItem className="hidden md:block">
-											<BreadcrumbLink href="/dashboard">DevLMS</BreadcrumbLink>
+											<BreadcrumbLink asChild>
+												<Link to="/dashboard">DevLMS</Link>
+											</BreadcrumbLink>
 										</BreadcrumbItem>
 										<BreadcrumbSeparator className="hidden md:block" />
 										<BreadcrumbItem>
-											<BreadcrumbPage>Learning overview</BreadcrumbPage>
+											<BreadcrumbPage>My learning</BreadcrumbPage>
 										</BreadcrumbItem>
 									</BreadcrumbList>
 								</Breadcrumb>
@@ -85,18 +95,48 @@ function DashboardPage() {
 						<div className="flex flex-1 flex-col gap-6 p-4 pt-4 md:p-6 lg:p-8">
 							<section className="overflow-hidden rounded-xl border border-blue-400/15 bg-gradient-to-br from-blue-500/15 via-slate-900 to-violet-500/10 p-6 md:p-8">
 								<p className="font-mono text-xs tracking-widest text-blue-400">
-									YOUR LEARNING SPACE
+									{currentCourse ? "CONTINUE LEARNING" : "MY LEARNING"}
 								</p>
 								<h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
 									Welcome back, {user.name.split(" ")[0]}.
 								</h1>
-								<p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 md:text-base">
-									Keep your momentum going. You’re two lessons away from your
-									next milestone.
-								</p>
-								<Button className="mt-6 bg-blue-500 text-white hover:bg-blue-400">
-									<Play className="size-4 fill-current" /> Continue learning
-								</Button>
+								{currentCourse ? (
+									<>
+										<p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 md:text-base">
+											Resume {currentCourse.course.title}
+											{currentCourse.resumeLesson
+												? ` from ${currentCourse.resumeLesson.title}.`
+												: "."}
+										</p>
+										<Button
+											asChild
+											className="mt-6 bg-blue-500 text-white hover:bg-blue-400"
+										>
+											<Link
+												to="/learn/$courseSlug"
+												params={{ courseSlug: currentCourse.course.slug }}
+											>
+												<Play className="size-4 fill-current" /> Continue
+												learning
+											</Link>
+										</Button>
+									</>
+								) : (
+									<>
+										<p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 md:text-base">
+											You have not joined a course yet. Explore the catalogue to
+											get started.
+										</p>
+										<Button
+											asChild
+											className="mt-6 bg-cyan-400 text-slate-950 hover:bg-cyan-300"
+										>
+											<Link hash="course" to="/">
+												Explore courses
+											</Link>
+										</Button>
+									</>
+								)}
 							</section>
 
 							<div
@@ -104,22 +144,22 @@ function DashboardPage() {
 								id="progress"
 							>
 								<StatCard
-									icon={Clock3}
-									label="Learning time"
-									note="This month"
-									value="12.5 hrs"
+									icon={Layers3}
+									label="Enrolled courses"
+									note="Your library"
+									value={String(courses.length)}
 								/>
 								<StatCard
-									icon={Flame}
-									label="Current streak"
-									note="Personal best: 12"
-									value="7 days"
+									icon={BookOpen}
+									label="Lessons completed"
+									note={`${totalLessons} total lessons`}
+									value={String(completedLessons)}
 								/>
 								<StatCard
-									icon={Code2}
-									label="Projects built"
-									note="2 in progress"
-									value="4"
+									icon={CheckCircle2}
+									label="Courses completed"
+									note="Keep building"
+									value={String(completedCourses)}
 								/>
 							</div>
 
@@ -127,46 +167,65 @@ function DashboardPage() {
 								className="min-h-[45vh] flex-1 rounded-xl border border-slate-800 bg-slate-900/35 p-5 md:p-6"
 								id="learning"
 							>
-								<div>
-									<p className="font-mono text-xs tracking-widest text-blue-400">
-										IN PROGRESS
-									</p>
-									<h2 className="mt-1 text-xl font-semibold">
-										Continue learning
-									</h2>
-								</div>
-								<div className="mt-5 grid gap-4 xl:grid-cols-2">
-									{courses.map((course) => (
-										<article
-											className="rounded-xl border border-slate-800 bg-[#0b1327] p-5"
-											key={course.title}
-										>
-											<div
-												className={`h-1.5 w-24 rounded-full bg-gradient-to-r ${course.gradient}`}
-											/>
-											<h3 className="mt-5 font-semibold">{course.title}</h3>
-											<p className="mt-1 text-sm text-slate-500">
-												{course.module}
-											</p>
-											<div className="mt-6 flex justify-between text-xs text-slate-500">
-												<span>{course.lessons}</span>
-												<span>{course.progress}%</span>
-											</div>
-											<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
-												<div
-													className={`h-full rounded-full bg-gradient-to-r ${course.gradient}`}
-													style={{ width: `${course.progress}%` }}
-												/>
-											</div>
-										</article>
-									))}
-								</div>
+								<p className="font-mono text-xs tracking-widest text-blue-400">
+									YOUR COURSES
+								</p>
+								<h2 className="mt-1 text-xl font-semibold">My learning</h2>
+								{courses.length > 0 ? (
+									<div className="mt-5 grid gap-4 xl:grid-cols-2">
+										{courses.map((item) => (
+											<CourseCard item={item} key={item.course.id} />
+										))}
+									</div>
+								) : (
+									<div className="mt-5 rounded-xl border border-dashed border-slate-700 px-6 py-12 text-center">
+										<BookOpen className="mx-auto size-8 text-slate-600" />
+										<p className="mt-4 font-medium">No enrolled courses yet</p>
+										<p className="mt-1 text-sm text-slate-500">
+											Your courses will appear here after enrollment.
+										</p>
+									</div>
+								)}
 							</section>
 						</div>
 					</SidebarInset>
 				</SidebarProvider>
 			</TooltipProvider>
 		</div>
+	);
+}
+
+type DashboardCourse = ReturnType<typeof Route.useLoaderData>[number];
+
+function CourseCard({ item }: { item: DashboardCourse }) {
+	const lesson = item.resumeLesson ?? item.nextLesson;
+	return (
+		<article className="rounded-xl border border-slate-800 bg-[#0b1327] p-5">
+			<div className="h-1.5 w-24 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400" />
+			<h3 className="mt-5 font-semibold">{item.course.title}</h3>
+			<p className="mt-1 text-sm text-slate-500">
+				{lesson
+					? `Lesson ${lesson.position} · ${lesson.title}`
+					: "No lessons available"}
+			</p>
+			<div className="mt-6 flex justify-between text-xs text-slate-500">
+				<span>
+					{item.completedLessonCount} of {item.lessonCount} lessons
+				</span>
+				<span>{item.progress}%</span>
+			</div>
+			<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-800">
+				<div
+					className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400"
+					style={{ width: `${item.progress}%` }}
+				/>
+			</div>
+			<Button asChild className="mt-5" size="sm" variant="outline">
+				<Link to="/learn/$courseSlug" params={{ courseSlug: item.course.slug }}>
+					{item.progress === 100 ? "Review course" : "Continue"}
+				</Link>
+			</Button>
+		</article>
 	);
 }
 

@@ -47,7 +47,7 @@ type UserAction =
 	| { action: "unban"; userId: string };
 
 export const managePlatformUser = createServerFn({ method: "POST" })
-	.inputValidator((input: UserAction) => input)
+	.validator((input: UserAction) => input)
 	.handler(async ({ data }) => {
 		const { headers, session } = await requirePlatformAdmin();
 		if (data.userId === session.user.id) {
@@ -72,7 +72,7 @@ export const managePlatformUser = createServerFn({ method: "POST" })
 	});
 
 export const deletePlatformOrganization = createServerFn({ method: "POST" })
-	.inputValidator((organizationId: string) => {
+	.validator((organizationId: string) => {
 		if (!organizationId) throw new Error("Organization ID is required");
 		return organizationId;
 	})

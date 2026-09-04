@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
 	ArrowLeft,
 	ArrowRight,
@@ -64,15 +65,15 @@ export function AuthPage({ mode }: AuthPageProps) {
 				<section className="relative hidden overflow-hidden border-r border-slate-800 bg-[#0b1327] p-10 lg:flex lg:flex-col">
 					<div className="absolute -left-40 top-20 size-120 rounded-full bg-blue-600/20 blur-3xl" />
 					<div className="absolute -bottom-56 right-0 size-120 rounded-full bg-violet-600/20 blur-3xl" />
-					<a
+					<Link
 						className="relative flex items-center gap-2.5 text-lg font-semibold tracking-tight"
-						href="/"
+						to="/"
 					>
 						<span className="grid size-8 place-items-center rounded-lg bg-blue-500 font-mono text-xs shadow-lg shadow-blue-500/30">
 							&lt;/&gt;
 						</span>
 						DevLMS
-					</a>
+					</Link>
 					<div className="relative my-auto max-w-md">
 						<p className="font-mono text-xs tracking-widest text-blue-400">
 							LEARN BY BUILDING
@@ -109,23 +110,23 @@ export function AuthPage({ mode }: AuthPageProps) {
 				<section className="flex min-h-screen items-center justify-center px-5 py-10 sm:px-8">
 					<div className="w-full max-w-sm">
 						<div className="mb-12 flex items-center justify-between lg:hidden">
-							<a className="flex items-center gap-2 font-semibold" href="/">
+							<Link className="flex items-center gap-2 font-semibold" to="/">
 								<span className="grid size-7 place-items-center rounded-md bg-blue-500 font-mono text-[10px]">
 									&lt;/&gt;
 								</span>
 								DevLMS
-							</a>
-							<a className="text-sm text-slate-400" href="/">
+							</Link>
+							<Link className="text-sm text-slate-400" to="/">
 								Back home
-							</a>
+							</Link>
 						</div>
-						<a
+						<Link
 							className="mb-8 inline-flex items-center gap-2 text-sm text-slate-400 transition hover:text-white"
-							href="/"
+							to="/"
 						>
 							<ArrowLeft className="size-4" />
 							Back to home
-						</a>
+						</Link>
 						<div>
 							<span className="grid size-11 place-items-center rounded-xl border border-blue-400/20 bg-blue-500/10 text-blue-300">
 								<LockKeyhole className="size-5" />
@@ -261,12 +262,21 @@ export function AuthPage({ mode }: AuthPageProps) {
 						)}
 						<p className="mt-7 text-center text-sm text-slate-400">
 							{isSignup ? "Already have an account?" : "New to DevLMS?"}{" "}
-							<a
-								className="font-medium text-blue-400 hover:text-blue-300"
-								href={isSignup ? "/login" : "/signup"}
-							>
-								{isSignup ? "Sign in" : "Create a free account"}
-							</a>
+							{isSignup ? (
+								<Link
+									className="font-medium text-blue-400 hover:text-blue-300"
+									to="/login"
+								>
+									Sign in
+								</Link>
+							) : (
+								<Link
+									className="font-medium text-blue-400 hover:text-blue-300"
+									to="/signup"
+								>
+									Create a free account
+								</Link>
+							)}
 						</p>
 					</div>
 				</section>

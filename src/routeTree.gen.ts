@@ -10,15 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlatformAdminRouteImport } from './routes/platform-admin'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as LearnCourseSlugRouteImport } from './routes/learn.$courseSlug'
+import { Route as PlatformAdminCoursesRouteImport } from './routes/platform-admin_.courses'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -41,6 +49,16 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LearnCourseSlugRoute = LearnCourseSlugRouteImport.update({
+  id: '/learn/$courseSlug',
+  path: '/learn/$courseSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformAdminCoursesRoute = PlatformAdminCoursesRouteImport.update({
+  id: '/platform-admin_/courses',
+  path: '/platform-admin/courses',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -49,62 +67,83 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/learn/$courseSlug': typeof LearnCourseSlugRoute
+  '/platform-admin/courses': typeof PlatformAdminCoursesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/learn/$courseSlug': typeof LearnCourseSlugRoute
+  '/platform-admin/courses': typeof PlatformAdminCoursesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
   '/platform-admin': typeof PlatformAdminRoute
   '/signup': typeof SignupRoute
+  '/learn/$courseSlug': typeof LearnCourseSlugRoute
+  '/platform-admin_/courses': typeof PlatformAdminCoursesRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/dashboard'
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/learn/$courseSlug'
+    | '/platform-admin/courses'
     | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/dashboard'
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/learn/$courseSlug'
+    | '/platform-admin/courses'
     | '/api/auth/$'
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/dashboard'
     | '/login'
     | '/platform-admin'
     | '/signup'
+    | '/learn/$courseSlug'
+    | '/platform-admin_/courses'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
   PlatformAdminRoute: typeof PlatformAdminRoute
   SignupRoute: typeof SignupRoute
+  LearnCourseSlugRoute: typeof LearnCourseSlugRoute
+  PlatformAdminCoursesRoute: typeof PlatformAdminCoursesRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -115,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -145,6 +191,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/learn/$courseSlug': {
+      id: '/learn/$courseSlug'
+      path: '/learn/$courseSlug'
+      fullPath: '/learn/$courseSlug'
+      preLoaderRoute: typeof LearnCourseSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/platform-admin_/courses': {
+      id: '/platform-admin_/courses'
+      path: '/platform-admin/courses'
+      fullPath: '/platform-admin/courses'
+      preLoaderRoute: typeof PlatformAdminCoursesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -157,10 +217,13 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
   PlatformAdminRoute: PlatformAdminRoute,
   SignupRoute: SignupRoute,
+  LearnCourseSlugRoute: LearnCourseSlugRoute,
+  PlatformAdminCoursesRoute: PlatformAdminCoursesRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

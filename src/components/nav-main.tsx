@@ -1,71 +1,67 @@
 "use client";
 
-import { ChevronRightIcon } from "lucide-react";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Link, useRouterState } from "@tanstack/react-router";
+
 import {
 	SidebarGroup,
 	SidebarGroupLabel,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
-	SidebarMenuSub,
-	SidebarMenuSubButton,
-	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 
-export function NavMain({
-	items,
-}: {
-	items: {
-		title: string;
-		url: string;
-		icon?: React.ReactNode;
-		isActive?: boolean;
-		items?: {
-			title: string;
-			url: string;
-		}[];
-	}[];
-}) {
+type StaticNavPath =
+	| "/"
+	| "/dashboard"
+	| "/account"
+	| "/platform-admin"
+	| "/platform-admin/courses";
+
+export type NavItem = {
+	title: string;
+	url: string;
+	icon: React.ReactNode;
+} & (
+	| { to: StaticNavPath; hash?: string }
+	| { to: "/learn/$courseSlug"; courseSlug: string }
+);
+
+export function NavMain({ items }: { items: NavItem[] }) {
+	const pathname = useRouterState({
+		select: (state) => state.location.pathname,
+	});
+
 	return (
 		<SidebarGroup>
-			<SidebarGroupLabel>Learning</SidebarGroupLabel>
+			<SidebarGroupLabel>Workspace</SidebarGroupLabel>
 			<SidebarMenu>
-				{items.map((item) => (
-					<Collapsible
-						key={item.title}
-						asChild
-						defaultOpen={item.isActive}
-						className="group/collapsible"
-					>
-						<SidebarMenuItem>
-							<CollapsibleTrigger asChild>
-								<SidebarMenuButton tooltip={item.title}>
-									{item.icon}
-									<span>{item.title}</span>
-									<ChevronRightIcon className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-								</SidebarMenuButton>
-							</CollapsibleTrigger>
-							<CollapsibleContent>
-								<SidebarMenuSub>
-									{item.items?.map((subItem) => (
-										<SidebarMenuSubItem key={subItem.title}>
-											<SidebarMenuSubButton asChild>
-												<a href={subItem.url}>
-													<span>{subItem.title}</span>
-												</a>
-											</SidebarMenuSubButton>
-										</SidebarMenuSubItem>
-									))}
-								</SidebarMenuSub>
-							</CollapsibleContent>
+				{items.map((item) => {
+					const isActive =
+						item.url === "/"
+							? pathname === "/"
+							: pathname === item.url || pathname.startsWith(`${item.url}/`);
+					return (
+						<SidebarMenuItem key={item.title}>
+							<SidebarMenuButton
+								asChild
+								isActive={isActive}
+								tooltip={item.title}
+							>
+								{item.to === "/learn/$courseSlug" ? (
+									<Link to={item.to} params={{ courseSlug: item.courseSlug }}>
+										{item.icon}
+										<span>{item.title}</span>
+									</Link>
+								) : (
+									<Link hash={item.hash} to={item.to}>
+										{item.icon}
+										<span>{item.title}</span>
+									</Link>
+								)}
+							</SidebarMenuButton>
 						</SidebarMenuItem>
-					</Collapsible>
-				))}
+					);
+				})}
 			</SidebarMenu>
 		</SidebarGroup>
 	);
