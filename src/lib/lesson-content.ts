@@ -210,7 +210,7 @@ export function getYouTubeEmbedUrl(value: string | null) {
 			}
 		}
 		if (!videoId || !/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) return null;
-		return `https://www.youtube-nocookie.com/embed/${videoId}`;
+		return `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1`;
 	} catch {
 		return null;
 	}

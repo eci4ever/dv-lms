@@ -8,6 +8,7 @@ import {
 	course,
 	enrollment,
 	lesson,
+	lessonEngagement,
 	lessonProgress,
 	quizAttempt,
 } from "@/db/schema";
@@ -206,7 +207,7 @@ export const getMyCourse = createServerFn({ method: "GET" })
 			};
 		}
 
-		const [lessons, progress] = await Promise.all([
+		const [lessons, progress, engagement] = await Promise.all([
 			db
 				.select()
 				.from(lesson)
@@ -222,20 +223,43 @@ export const getMyCourse = createServerFn({ method: "GET" })
 						eq(lessonProgress.userId, user.id),
 					),
 				),
+			db
+				.select({
+					lessonId: lessonEngagement.lessonId,
+					playbackPositionSeconds: lessonEngagement.playbackPositionSeconds,
+					learningSeconds: lessonEngagement.learningSeconds,
+				})
+				.from(lessonEngagement)
+				.innerJoin(lesson, eq(lessonEngagement.lessonId, lesson.id))
+				.where(
+					and(
+						eq(lesson.courseId, activeCourse.id),
+						eq(lessonEngagement.userId, user.id),
+					),
+				),
 		]);
+		const engagementByLesson = new Map(
+			engagement.map((item) => [item.lessonId, item]),
+		);
 
 		const learnerLessons = lessons.map((item) => {
-			if (item.contentType !== "quiz") return item;
+			const activity = engagementByLesson.get(item.id);
+			const withEngagement = {
+				...item,
+				playbackPositionSeconds: activity?.playbackPositionSeconds ?? 0,
+				learningSeconds: activity?.learningSeconds ?? 0,
+			};
+			if (item.contentType !== "quiz") return withEngagement;
 			try {
 				return {
-					...item,
+					...withEngagement,
 					content: JSON.stringify(
 						getStudentQuiz(parseQuizDefinition(item.content)),
 					),
 				};
 			} catch {
 				return {
-					...item,
+					...withEngagement,
 					content: JSON.stringify({ passingScore: 80, questions: [] }),
 				};
 			}
@@ -248,6 +272,71 @@ export const getMyCourse = createServerFn({ method: "GET" })
 			completedLessonIds: progress.map((item) => item.lessonId),
 			resumeLessonId: activeEnrollment.lastAccessedLessonId,
 		};
+	});
+
+export const recordLessonEngagement = createServerFn({ method: "POST" })
+	.validator(
+		(data: {
+			lessonId: string;
+			learningSeconds: number;
+			playbackPositionSeconds?: number;
+		}) => {
+			if (!data.lessonId) throw new Error("Lesson ID is required");
+			if (
+				!Number.isInteger(data.learningSeconds) ||
+				data.learningSeconds < 0 ||
+				data.learningSeconds > 60
+			) {
+				throw new Error("Learning duration is invalid");
+			}
+			const playbackPositionSeconds = Math.max(
+				0,
+				Math.floor(data.playbackPositionSeconds ?? 0),
+			);
+			return { ...data, playbackPositionSeconds };
+		},
+	)
+	.handler(async ({ data }) => {
+		const user = await requireUser();
+		const db = getDatabase();
+		const enrolledLesson = await db
+			.select({ id: lesson.id })
+			.from(lesson)
+			.innerJoin(enrollment, eq(enrollment.courseId, lesson.courseId))
+			.where(and(eq(lesson.id, data.lessonId), eq(enrollment.userId, user.id)))
+			.get();
+		if (!enrolledLesson) throw new Error("Course enrollment required");
+
+		const existing = await db
+			.select({ learningSeconds: lessonEngagement.learningSeconds })
+			.from(lessonEngagement)
+			.where(
+				and(
+					eq(lessonEngagement.userId, user.id),
+					eq(lessonEngagement.lessonId, data.lessonId),
+				),
+			)
+			.get();
+		await db
+			.insert(lessonEngagement)
+			.values({
+				id: crypto.randomUUID(),
+				userId: user.id,
+				lessonId: data.lessonId,
+				learningSeconds: data.learningSeconds,
+				playbackPositionSeconds: data.playbackPositionSeconds,
+				updatedAt: new Date(),
+			})
+			.onConflictDoUpdate({
+				target: [lessonEngagement.userId, lessonEngagement.lessonId],
+				set: {
+					learningSeconds:
+						(existing?.learningSeconds ?? 0) + data.learningSeconds,
+					playbackPositionSeconds: data.playbackPositionSeconds,
+					updatedAt: new Date(),
+				},
+			});
+		return { success: true };
 	});
 
 export const recordLessonAccess = createServerFn({ method: "POST" })

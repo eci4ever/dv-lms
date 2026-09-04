@@ -66,7 +66,7 @@ describe("YouTube URLs", () => {
 		["https://youtube.com/shorts/dQw4w9WgXcQ", "dQw4w9WgXcQ"],
 	])("converts %s to a privacy-enhanced embed", (input, id) => {
 		expect(getYouTubeEmbedUrl(input)).toBe(
-			`https://www.youtube-nocookie.com/embed/${id}`,
+			`https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1`,
 		);
 	});
 

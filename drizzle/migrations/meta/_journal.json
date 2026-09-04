@@ -64,6 +64,13 @@
       "when": 1788516607970,
       "tag": "0008_quiz-attempts-and-certificates",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1788516701430,
+      "tag": "0009_lesson-engagement",
+      "breakpoints": true
     }
   ]
 }

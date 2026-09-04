@@ -36,7 +36,7 @@ DevLMS is a creator-owned learning platform: every course is produced and manage
 ## 5. Better progress tracking
 
 - [x] Record last accessed course and lesson
-- [ ] Save video playback position and actual learning time
+- [x] Save video playback position and actual learning time
 - [x] Record course completion date
 - [x] Allow a completed lesson to be marked incomplete
 - [ ] Optionally auto-complete a lesson after its completion threshold

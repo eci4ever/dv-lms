@@ -18,7 +18,7 @@ import {
 	RotateCcw,
 	XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,7 @@ import {
 	getMyCourse,
 	markLessonIncomplete,
 	recordLessonAccess,
+	recordLessonEngagement,
 	submitQuiz,
 } from "@/lib/learning.functions";
 import { getYouTubeEmbedUrl, parseStudentQuiz } from "@/lib/lesson-content";
@@ -283,7 +284,60 @@ function LessonContent({
 		return <ArticleContent content={lesson.content} />;
 	}
 
+	return <VideoContent lesson={lesson} />;
+}
+
+function VideoContent({ lesson }: { lesson: LearningLesson }) {
 	const embedUrl = getYouTubeEmbedUrl(lesson.videoUrl);
+	const playbackPositionRef = useRef(lesson.playbackPositionSeconds);
+	const iframeRef = useRef<HTMLIFrameElement>(null);
+
+	useEffect(() => {
+		let pendingSeconds = 0;
+		const interval = window.setInterval(() => {
+			if (document.visibilityState !== "visible") return;
+			pendingSeconds += 15;
+			recordLessonEngagement({
+				data: {
+					lessonId: lesson.id,
+					learningSeconds: pendingSeconds,
+					playbackPositionSeconds: playbackPositionRef.current,
+				},
+			})
+				.then(() => {
+					pendingSeconds = 0;
+				})
+				.catch(() => undefined);
+		}, 15_000);
+		return () => window.clearInterval(interval);
+	}, [lesson.id]);
+
+	useEffect(() => {
+		function receiveYouTubeState(event: MessageEvent) {
+			if (event.origin !== "https://www.youtube-nocookie.com") return;
+			try {
+				const message =
+					typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+				const currentTime = message?.info?.currentTime;
+				if (typeof currentTime === "number") {
+					playbackPositionRef.current = Math.floor(currentTime);
+				}
+			} catch {
+				// Ignore messages that are not YouTube player events.
+			}
+		}
+		window.addEventListener("message", receiveYouTubeState);
+		const listen = window.setInterval(() => {
+			iframeRef.current?.contentWindow?.postMessage(
+				JSON.stringify({ event: "listening", id: lesson.id }),
+				"https://www.youtube-nocookie.com",
+			);
+		}, 1_000);
+		return () => {
+			window.clearInterval(listen);
+			window.removeEventListener("message", receiveYouTubeState);
+		};
+	}, [lesson.id]);
 	return (
 		<div className="space-y-5">
 			<div className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl shadow-black/30">
@@ -293,7 +347,8 @@ function LessonContent({
 						allowFullScreen
 						className="aspect-video w-full"
 						referrerPolicy="strict-origin-when-cross-origin"
-						src={embedUrl}
+						ref={iframeRef}
+						src={`${embedUrl}&start=${lesson.playbackPositionSeconds}`}
 						title={lesson.title}
 					/>
 				) : (

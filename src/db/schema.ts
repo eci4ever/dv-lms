@@ -253,6 +253,30 @@ export const quizAttempt = sqliteTable(
 	],
 );
 
+export const lessonEngagement = sqliteTable(
+	"lesson_engagement",
+	{
+		id: text("id").primaryKey(),
+		userId: text("userId")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		lessonId: text("lessonId")
+			.notNull()
+			.references(() => lesson.id, { onDelete: "cascade" }),
+		playbackPositionSeconds: integer("playbackPositionSeconds")
+			.default(0)
+			.notNull(),
+		learningSeconds: integer("learningSeconds").default(0).notNull(),
+		updatedAt: integer("updatedAt", { mode: "timestamp_ms" }).notNull(),
+	},
+	(table) => [
+		uniqueIndex("lesson_engagement_userId_lessonId_uidx").on(
+			table.userId,
+			table.lessonId,
+		),
+	],
+);
+
 export const certificate = sqliteTable(
 	"certificate",
 	{
@@ -282,6 +306,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	enrollments: many(enrollment),
 	lessonProgress: many(lessonProgress),
 	quizAttempts: many(quizAttempt),
+	lessonEngagement: many(lessonEngagement),
 	certificates: many(certificate),
 }));
 
@@ -294,6 +319,7 @@ export const courseRelations = relations(course, ({ many }) => ({
 export const lessonRelations = relations(lesson, ({ one, many }) => ({
 	course: one(course, { fields: [lesson.courseId], references: [course.id] }),
 	progress: many(lessonProgress),
+	engagement: many(lessonEngagement),
 }));
 
 export const enrollmentRelations = relations(enrollment, ({ one }) => ({
