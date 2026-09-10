@@ -24,7 +24,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "TanStack Start Starter",
+				title: "DV LMS | Learn at your own pace",
+			},
+			{
+				name: "description",
+				content:
+					"Build new skills with practical lessons and learning at your own pace on DV LMS.",
 			},
 		],
 		links: [
