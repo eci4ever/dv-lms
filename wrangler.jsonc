@@ -1,7 +1,17 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "dv-lms",
-  "compatibility_date": "2025-09-02",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry"
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "dv-lms",
+	"compatibility_date": "2025-09-02",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "@tanstack/react-start/server-entry",
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "dv-lms-db",
+				"database_id": "f5263b4d-c844-4ac9-aced-022b5f649827",
+				"migrations_dir": "migrations"
+		}
+	]
 }
