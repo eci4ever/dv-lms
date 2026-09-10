@@ -1,12 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
 	SidebarInset,
@@ -17,71 +10,62 @@ import { getDashboardSession } from "@/lib/auth.functions";
 
 export const Route = createFileRoute("/dashboard")({
 	beforeLoad: async () => {
-		const session = await getDashboardSession();
-		if (!session) {
-			throw redirect({ to: "/login" });
-		}
-		return session;
+		const data = await getDashboardSession();
+		if (!data) throw redirect({ to: "/login" });
+		return data;
 	},
 	component: Dashboard,
 });
 
 function Dashboard() {
-	const { user, session, organizations } = Route.useRouteContext();
-	const activeOrganization = organizations.find(
-		(organization) => organization.id === session.activeOrganizationId,
-	);
+	const {
+		session,
+		organization,
+		organizations,
+		activeOrganizationId,
+		isOrganizationOwner,
+		organizationRole,
+	} = Route.useRouteContext();
+	const firstName = session.user.name.split(/\s+/)[0] || session.user.name;
 
 	return (
 		<SidebarProvider>
 			<AppSidebar
-				user={user}
+				user={session.user}
 				organizations={organizations}
-				activeOrganizationId={session.activeOrganizationId}
+				activeOrganizationId={activeOrganizationId}
+				isOrganizationOwner={isOrganizationOwner}
+				organizationRole={organizationRole}
+				isImpersonating={Boolean(session.session.impersonatedBy)}
 			/>
 			<SidebarInset>
 				<header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
 					<SidebarTrigger className="-ml-1" />
-					<Separator orientation="vertical" className="h-4" />
-					<p className="text-sm text-muted-foreground">Dashboard</p>
+					<Separator
+						orientation="vertical"
+						className="mr-2 data-vertical:h-4 data-vertical:self-center"
+					/>
+					<p className="text-sm font-medium">Dashboard</p>
 				</header>
-				<main className="mx-auto w-full max-w-5xl p-6 md:p-10">
+				<main className="flex flex-1 flex-col gap-6 p-6 sm:p-8">
 					<div className="space-y-2">
-						<p className="text-sm text-muted-foreground">Welcome back</p>
-						<h1 className="text-3xl font-semibold tracking-tight">
-							{user.name}
+						<p className="text-sm text-muted-foreground">
+							{organization?.name ?? "Your personal workspace"}
+						</p>
+						<h1 className="text-2xl font-semibold tracking-tight">
+							Welcome, {firstName}
 						</h1>
-						<p className="text-muted-foreground">
-							You’re signed in as {user.email}.
+						<p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+							Your DV LMS workspace is ready for you to continue learning and
+							track your progress.
 						</p>
 					</div>
-					<div className="mt-8 grid gap-4 md:grid-cols-2">
-						<Card>
-							<CardHeader>
-								<CardTitle>Active organization</CardTitle>
-								<CardDescription>
-									Use the switcher in the sidebar to change your active
-									organization.
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="text-sm">
-								{activeOrganization?.name ?? "No organization selected"}
-							</CardContent>
-						</Card>
-						<Card>
-							<CardHeader>
-								<CardTitle>Your organizations</CardTitle>
-								<CardDescription>
-									Organizations are available to this account.
-								</CardDescription>
-							</CardHeader>
-							<CardContent className="text-sm">
-								{organizations.length
-									? `${organizations.length} available`
-									: "You have not joined an organization yet."}
-							</CardContent>
-						</Card>
-					</div>
+					<section className="rounded-xl border bg-card p-6">
+						<p className="text-sm font-medium">Your account</p>
+						<p className="mt-1 text-sm text-muted-foreground">
+							{session.user.email}
+						</p>
+					</section>
 				</main>
 			</SidebarInset>
 		</SidebarProvider>

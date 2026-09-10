@@ -25,12 +25,12 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "DV LMS | Learn at your own pace",
+				title: "DV LMS — Learning management system",
 			},
 			{
 				name: "description",
 				content:
-					"Build new skills with practical lessons and learning at your own pace on DV LMS.",
+					"A simple learning platform for courses, progress, and practical skills.",
 			},
 		],
 		links: [

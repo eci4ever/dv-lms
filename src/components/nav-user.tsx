@@ -1,11 +1,13 @@
 "use client";
 
 import { useNavigate } from "@tanstack/react-router";
-import { LogOutIcon } from "lucide-react";
+import { ChevronsUpDownIcon, LogOutIcon, ShieldCheckIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -21,8 +23,15 @@ import { authClient } from "@/lib/auth-client";
 
 export function NavUser({
 	user,
+	isImpersonating,
 }: {
-	user: { name: string; email: string; image?: string | null };
+	user: {
+		name: string;
+		email: string;
+		image?: string | null;
+		role?: string | null;
+	};
+	isImpersonating: boolean;
 }) {
 	const { isMobile } = useSidebar();
 	const navigate = useNavigate();
@@ -32,12 +41,18 @@ export function NavUser({
 		.join("")
 		.slice(0, 2)
 		.toUpperCase();
+	const roleLabel = user.role
+		?.split(",")[0]
+		.replace(/^./, (character) => character.toUpperCase());
 
 	async function signOut() {
-		const result = await authClient.signOut();
-		if (!result.error) {
-			await navigate({ to: "/" });
-		}
+		await authClient.signOut();
+		await navigate({ to: "/" });
+	}
+
+	async function stopImpersonating() {
+		const result = await authClient.admin.stopImpersonating();
+		if (!result.error) window.location.assign("/dashboard");
 	}
 
 	return (
@@ -45,6 +60,7 @@ export function NavUser({
 			<SidebarMenuItem>
 				<DropdownMenu>
 					<DropdownMenuTrigger
+						aria-label="Open user menu"
 						render={
 							<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
 						}
@@ -53,26 +69,66 @@ export function NavUser({
 							<AvatarImage src={user.image ?? undefined} alt={user.name} />
 							<AvatarFallback>{initials}</AvatarFallback>
 						</Avatar>
-						<div className="grid flex-1 text-left text-sm leading-tight">
+						<div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
 							<span className="truncate font-medium">{user.name}</span>
-							<span className="truncate text-xs">{user.email}</span>
+							<div className="flex min-w-0 items-center gap-1">
+								<span className="min-w-0 flex-1 truncate text-xs">
+									{user.email}
+								</span>
+								{roleLabel ? (
+									<Badge className="shrink-0" variant="secondary">
+										{roleLabel}
+									</Badge>
+								) : null}
+							</div>
 						</div>
+						<ChevronsUpDownIcon
+							className="ml-auto size-4 shrink-0 group-data-[collapsible=icon]:hidden"
+							aria-hidden="true"
+						/>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent
-						className="w-56"
+						className="min-w-56 max-w-72"
 						side={isMobile ? "bottom" : "right"}
 						align="end"
 						sideOffset={4}
 					>
-						<DropdownMenuLabel className="font-normal">
-							<div className="flex flex-col gap-1">
-								<span className="font-medium">{user.name}</span>
-								<span className="text-xs text-muted-foreground">
-									{user.email}
-								</span>
-							</div>
-						</DropdownMenuLabel>
+						<DropdownMenuGroup>
+							<DropdownMenuLabel className="p-0 font-normal">
+								<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+									<Avatar>
+										<AvatarImage
+											src={user.image ?? undefined}
+											alt={user.name}
+										/>
+										<AvatarFallback>{initials}</AvatarFallback>
+									</Avatar>
+									<div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
+										<span className="truncate font-medium">{user.name}</span>
+										<div className="flex min-w-0 items-center gap-1">
+											<span className="min-w-0 flex-1 truncate text-xs">
+												{user.email}
+											</span>
+											{roleLabel ? (
+												<Badge className="shrink-0" variant="secondary">
+													{roleLabel}
+												</Badge>
+											) : null}
+										</div>
+									</div>
+								</div>
+							</DropdownMenuLabel>
+						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
+						{isImpersonating ? (
+							<>
+								<DropdownMenuItem onClick={stopImpersonating}>
+									<ShieldCheckIcon />
+									Return to admin
+								</DropdownMenuItem>
+								<DropdownMenuSeparator />
+							</>
+						) : null}
 						<DropdownMenuItem onClick={signOut}>
 							<LogOutIcon />
 							Log out

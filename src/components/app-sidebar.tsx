@@ -1,72 +1,151 @@
-"use client";
-
-import { BookOpenIcon, LayoutDashboardIcon, Settings2Icon } from "lucide-react";
+import {
+	Building2Icon,
+	LayoutDashboardIcon,
+	ScrollTextIcon,
+	Settings2Icon,
+	UserRoundCogIcon,
+	UsersRoundIcon,
+} from "lucide-react";
 import type * as React from "react";
-import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
-import { TeamSwitcher } from "@/components/team-switcher";
+import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
 	Sidebar,
 	SidebarContent,
 	SidebarFooter,
+	SidebarGroup,
+	SidebarGroupContent,
+	SidebarGroupLabel,
 	SidebarHeader,
+	SidebarMenu,
+	SidebarMenuButton,
+	SidebarMenuItem,
 	SidebarRail,
 } from "@/components/ui/sidebar";
 
-type Organization = {
-	id: string;
-	name: string;
-	logo?: string | null;
-};
-
-type User = {
-	name: string;
-	email: string;
-	image?: string | null;
-};
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+	user: {
+		name: string;
+		email: string;
+		image?: string | null;
+		role?: string | null;
+	};
+	organizations: {
+		id: string;
+		name: string;
+		slug: string;
+		logo?: string | null;
+	}[];
+	activeOrganizationId?: string | null;
+	isOrganizationOwner: boolean;
+	organizationRole?: string | null;
+	isImpersonating: boolean;
+}
 
 export function AppSidebar({
 	user,
 	organizations,
 	activeOrganizationId,
+	isOrganizationOwner,
+	organizationRole,
+	isImpersonating,
 	...props
-}: React.ComponentProps<typeof Sidebar> & {
-	user: User;
-	organizations: Organization[];
-	activeOrganizationId?: string | null;
-}) {
+}: AppSidebarProps) {
+	const isAdmin = user.role?.split(",").includes("admin") ?? false;
+
 	return (
 		<Sidebar collapsible="icon" {...props}>
-			<SidebarHeader>
-				<TeamSwitcher
+			<SidebarHeader className="h-16 shrink-0 justify-center">
+				<OrganizationSwitcher
 					organizations={organizations}
 					activeOrganizationId={activeOrganizationId}
+					organizationRole={organizationRole}
 				/>
 			</SidebarHeader>
 			<SidebarContent>
-				<NavMain
-					items={[
-						{
-							title: "Dashboard",
-							url: "/dashboard",
-							icon: <LayoutDashboardIcon />,
-							isActive: true,
-						},
-						{
-							title: "Learning",
-							url: "#",
-							icon: <BookOpenIcon />,
-						},
-						{
-							title: "Settings",
-							url: "#",
-							icon: <Settings2Icon />,
-						},
-					]}
-				/>
+				<SidebarGroup>
+					<SidebarGroupLabel>Main</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									render={
+										<a href="/dashboard">
+											<LayoutDashboardIcon />
+											<span>Dashboard</span>
+										</a>
+									}
+									isActive
+									tooltip="Dashboard"
+								/>
+							</SidebarMenuItem>
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
+
+				{isOrganizationOwner ? (
+					<SidebarGroup>
+						<SidebarGroupLabel>Workspace</SidebarGroupLabel>
+						<SidebarGroupContent>
+							<SidebarMenu>
+								<SidebarMenuItem>
+									<SidebarMenuButton tooltip="Organization settings">
+										<Settings2Icon />
+										<span>Organization settings</span>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton tooltip="Members">
+										<UsersRoundIcon />
+										<span>Members</span>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton tooltip="Invitations">
+										<UserRoundCogIcon />
+										<span>Invitations</span>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+				) : null}
+
+				{isAdmin ? (
+					<SidebarGroup>
+						<SidebarGroupLabel>Platform Admin</SidebarGroupLabel>
+						<SidebarGroupContent>
+							<SidebarMenu>
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										render={
+											<a href="/admin/users">
+												<UsersRoundIcon />
+												<span>Users</span>
+											</a>
+										}
+										tooltip="Users"
+									/>
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton tooltip="Organizations">
+										<Building2Icon />
+										<span>Organizations</span>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton tooltip="Audit log">
+										<ScrollTextIcon />
+										<span>Audit log</span>
+									</SidebarMenuButton>
+								</SidebarMenuItem>
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+				) : null}
 			</SidebarContent>
 			<SidebarFooter>
-				<NavUser user={user} />
+				<NavUser user={user} isImpersonating={isImpersonating} />
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>
