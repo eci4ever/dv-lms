@@ -53,7 +53,10 @@ export const getAdminUsers = createServerFn({ method: "GET" }).handler(
 		const headers = getRequestHeaders();
 		const session = await auth.api.getSession({ headers });
 
-		if (!session?.user.role?.split(",").includes("admin")) {
+		if (
+			!session?.user.role?.split(",").includes("admin") ||
+			session.session.impersonatedBy
+		) {
 			throw new Error("Administrator access is required.");
 		}
 
@@ -70,7 +73,10 @@ export const createAdminOrganizationUser = createServerFn({ method: "POST" })
 		const headers = getRequestHeaders();
 		const session = await auth.api.getSession({ headers });
 
-		if (!session?.user.role?.split(",").includes("admin")) {
+		if (
+			!session?.user.role?.split(",").includes("admin") ||
+			session.session.impersonatedBy
+		) {
 			throw new Error("Administrator access is required.");
 		}
 

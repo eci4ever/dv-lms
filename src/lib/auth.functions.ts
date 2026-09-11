@@ -16,8 +16,14 @@ export const getDashboardSession = createServerFn({ method: "GET" }).handler(
 		}
 
 		const organizations = await auth.api.listOrganizations({ headers });
+		const sessionOrganizationId = session.session.activeOrganizationId;
 		const activeOrganizationId =
-			session.session.activeOrganizationId ?? organizations[0]?.id;
+			sessionOrganizationId &&
+			organizations.some(
+				(organization) => organization.id === sessionOrganizationId,
+			)
+				? sessionOrganizationId
+				: organizations[0]?.id;
 		const organization = activeOrganizationId
 			? await auth.api.getFullOrganization({
 					headers,

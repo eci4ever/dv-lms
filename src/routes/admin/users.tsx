@@ -73,7 +73,10 @@ export const Route = createFileRoute("/admin/users")({
 			throw redirect({ to: "/login" });
 		}
 
-		if (!dashboard.session.user.role?.split(",").includes("admin")) {
+		if (
+			dashboard.session.session.impersonatedBy ||
+			!dashboard.session.user.role?.split(",").includes("admin")
+		) {
 			throw redirect({ to: "/dashboard" });
 		}
 
@@ -413,9 +416,20 @@ function UserManagement() {
 			const result = await authClient.admin.impersonateUser({
 				userId: selectedUser.id,
 			});
-			if (result.error)
+			if (result.error) {
 				setError(result.error.message ?? "Unable to impersonate this user.");
-			else window.location.assign("/dashboard");
+			} else {
+				const organizations = await authClient.organization.list();
+				const firstOrganization = organizations.data?.[0];
+
+				if (firstOrganization) {
+					await authClient.organization.setActive({
+						organizationId: firstOrganization.id,
+					});
+				}
+
+				window.location.assign("/dashboard");
+			}
 		} else if (riskAction === "delete") {
 			const result = await authClient.admin.removeUser({
 				userId: selectedUser.id,
