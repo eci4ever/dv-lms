@@ -69,6 +69,10 @@ const roles = [
 		description:
 			"Review, organize, publish, and maintain the organization's course catalog.",
 	},
+	{
+		name: "Student",
+		description: "Access assigned courses and view their own enrollments.",
+	},
 ];
 
 function WorkspaceSettings() {

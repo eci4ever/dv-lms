@@ -44,15 +44,26 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
 	SidebarInset,
 	SidebarProvider,
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { getAdminUsers } from "@/lib/admin.functions";
+import {
+	createAdminOrganizationUser,
+	getAdminUsers,
+} from "@/lib/admin.functions";
 import { getDashboardSession } from "@/lib/auth.functions";
 import { authClient } from "@/lib/auth-client";
+import type { AssignableOrganizationRole } from "@/lib/organization-permissions";
 
 export const Route = createFileRoute("/admin/users")({
 	beforeLoad: async () => {
@@ -78,6 +89,17 @@ function roleLabel(role?: string | null) {
 		.map((value) => value.replace(/^./, (character) => character.toUpperCase()))
 		.join(", ");
 }
+
+const organizationRoleOptions = [
+	{ value: "owner", label: "Owner" },
+	{ value: "admin", label: "Admin" },
+	{ value: "instructor", label: "Instructor" },
+	{ value: "course_manager", label: "Course Manager" },
+	{ value: "student", label: "Student" },
+] as const satisfies ReadonlyArray<{
+	value: AssignableOrganizationRole;
+	label: string;
+}>;
 
 function userInitials(name: string) {
 	return name
@@ -138,8 +160,18 @@ function UserManagement() {
 		name: "",
 		email: "",
 		password: "",
+		organizationId: activeOrganizationId ?? organizations[0]?.id ?? "",
+		organizationRole: "instructor" as AssignableOrganizationRole,
 	});
 	const [riskAction, setRiskAction] = useState<RiskAction | null>(null);
+	const organizationOptions = useMemo(
+		() =>
+			organizations.map((organization) => ({
+				value: organization.id,
+				label: organization.name,
+			})),
+		[organizations],
+	);
 
 	const selectUser = useCallback((user: ManagedUser) => {
 		setSelectedUser(user);
@@ -348,19 +380,26 @@ function UserManagement() {
 		event.preventDefault();
 		setIsSaving(true);
 		setError(null);
-		const result = await authClient.admin.createUser({
-			...newUser,
-			role: "user",
-		});
-		if (result.error) {
-			setError(result.error.message ?? "Unable to create the user.");
-		} else {
-			setNewUser({ name: "", email: "", password: "" });
+
+		try {
+			await createAdminOrganizationUser({ data: newUser });
+			setNewUser({
+				name: "",
+				email: "",
+				password: "",
+				organizationId: activeOrganizationId ?? organizations[0]?.id ?? "",
+				organizationRole: "instructor",
+			});
 			setShowCreateUser(false);
 			setSearch("");
 			await refreshUsers();
+		} catch (error) {
+			setError(
+				error instanceof Error ? error.message : "Unable to create the user.",
+			);
+		} finally {
+			setIsSaving(false);
 		}
-		setIsSaving(false);
 	}
 
 	async function confirmRiskAction() {
@@ -699,7 +738,7 @@ function UserManagement() {
 									<DialogHeader>
 										<DialogTitle>Create user</DialogTitle>
 										<DialogDescription>
-											Create an account with standard user access.
+											Create an account and add it to an organization.
 										</DialogDescription>
 									</DialogHeader>
 									<div className="grid gap-4">
@@ -753,9 +792,76 @@ function UserManagement() {
 												required
 											/>
 										</label>
+										<label
+											htmlFor="create-user-organization"
+											className="grid gap-2 text-sm font-medium"
+										>
+											Organization
+											<Select
+												items={organizationOptions}
+												value={newUser.organizationId}
+												onValueChange={(organizationId) => {
+													if (organizationId) {
+														setNewUser((user) => ({ ...user, organizationId }));
+													}
+												}}
+											>
+												<SelectTrigger
+													id="create-user-organization"
+													className="w-full"
+												>
+													<SelectValue placeholder="Select organization" />
+												</SelectTrigger>
+												<SelectContent>
+													{organizationOptions.map((organization) => (
+														<SelectItem
+															key={organization.value}
+															value={organization.value}
+														>
+															{organization.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</label>
+										<label
+											htmlFor="create-user-organization-role"
+											className="grid gap-2 text-sm font-medium"
+										>
+											Organization role
+											<Select
+												items={organizationRoleOptions}
+												value={newUser.organizationRole}
+												onValueChange={(organizationRole) => {
+													if (organizationRole) {
+														setNewUser((user) => ({
+															...user,
+															organizationRole,
+														}));
+													}
+												}}
+											>
+												<SelectTrigger
+													id="create-user-organization-role"
+													className="w-full"
+												>
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													{organizationRoleOptions.map((role) => (
+														<SelectItem key={role.value} value={role.value}>
+															{role.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</label>
 									</div>
 									<DialogFooter showCloseButton>
-										<Button type="submit" disabled={isSaving}>
+										<Button
+											type="submit"
+											disabled={isSaving || !newUser.organizationId}
+										>
 											{isSaving ? "Creating..." : "Create user"}
 										</Button>
 									</DialogFooter>

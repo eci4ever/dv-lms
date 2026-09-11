@@ -15,6 +15,17 @@ const statement = {
 
 export const organizationAccessControl = createAccessControl(statement);
 
+export const assignableOrganizationRoles = [
+	"owner",
+	"admin",
+	"instructor",
+	"course_manager",
+	"student",
+] as const;
+
+export type AssignableOrganizationRole =
+	(typeof assignableOrganizationRoles)[number];
+
 const owner = organizationAccessControl.newRole({
 	...ownerAc.statements,
 	course: ["create", "read", "update", "delete", "publish"],
@@ -43,11 +54,17 @@ const courseManager = organizationAccessControl.newRole({
 	analytics: ["read"],
 });
 
+const student = organizationAccessControl.newRole({
+	course: ["read"],
+	enrollment: ["read"],
+});
+
 export const organizationRoles = {
 	owner,
 	admin,
 	instructor,
 	course_manager: courseManager,
+	student,
 };
 
 export function formatRole(role: string) {
