@@ -1,12 +1,24 @@
+import { Link } from "@tanstack/react-router";
 import {
+	BookOpenIcon,
 	Building2Icon,
+	ChartNoAxesColumnIncreasingIcon,
+	ClipboardCheckIcon,
+	CreditCardIcon,
+	GaugeIcon,
 	LayoutDashboardIcon,
+	LibraryIcon,
+	type LucideIcon,
+	MailPlusIcon,
+	MegaphoneIcon,
+	PanelsTopLeftIcon,
 	ScrollTextIcon,
 	Settings2Icon,
-	UserRoundCogIcon,
+	SlidersHorizontalIcon,
 	UsersRoundIcon,
 } from "lucide-react";
 import type * as React from "react";
+
 import { NavUser } from "@/components/nav-user";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
 import {
@@ -40,6 +52,28 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	isOrganizationOwner: boolean;
 	organizationRole?: string | null;
 	isImpersonating: boolean;
+	activeItem?: "dashboard" | "settings" | "users";
+}
+
+interface MockSidebarItemProps {
+	icon: LucideIcon;
+	label: string;
+	tooltip?: string;
+}
+
+function MockSidebarItem({
+	icon: Icon,
+	label,
+	tooltip = label,
+}: MockSidebarItemProps) {
+	return (
+		<SidebarMenuItem>
+			<SidebarMenuButton type="button" tooltip={tooltip}>
+				<Icon />
+				<span>{label}</span>
+			</SidebarMenuButton>
+		</SidebarMenuItem>
+	);
 }
 
 export function AppSidebar({
@@ -49,6 +83,7 @@ export function AppSidebar({
 	isOrganizationOwner,
 	organizationRole,
 	isImpersonating,
+	activeItem = "dashboard",
 	...props
 }: AppSidebarProps) {
 	const isAdmin = user.role?.split(",").includes("admin") ?? false;
@@ -70,75 +105,85 @@ export function AppSidebar({
 							<SidebarMenuItem>
 								<SidebarMenuButton
 									render={
-										<a href="/dashboard">
+										<Link to="/dashboard">
 											<LayoutDashboardIcon />
 											<span>Dashboard</span>
-										</a>
+										</Link>
 									}
-									isActive
+									isActive={activeItem === "dashboard"}
 									tooltip="Dashboard"
 								/>
 							</SidebarMenuItem>
+							<MockSidebarItem icon={BookOpenIcon} label="My Courses" />
+							<MockSidebarItem icon={ClipboardCheckIcon} label="Assignments" />
+							<MockSidebarItem
+								icon={ChartNoAxesColumnIncreasingIcon}
+								label="Progress"
+							/>
+							<MockSidebarItem icon={LibraryIcon} label="Course Catalog" />
 						</SidebarMenu>
 					</SidebarGroupContent>
 				</SidebarGroup>
-
-				{isOrganizationOwner ? (
-					<SidebarGroup>
-						<SidebarGroupLabel>Workspace</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								<SidebarMenuItem>
-									<SidebarMenuButton tooltip="Organization settings">
-										<Settings2Icon />
-										<span>Organization settings</span>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-								<SidebarMenuItem>
-									<SidebarMenuButton tooltip="Members">
-										<UsersRoundIcon />
-										<span>Members</span>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-								<SidebarMenuItem>
-									<SidebarMenuButton tooltip="Invitations">
-										<UserRoundCogIcon />
-										<span>Invitations</span>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
-				) : null}
-
+				<SidebarGroup>
+					<SidebarGroupLabel>Workspace</SidebarGroupLabel>
+					<SidebarGroupContent>
+						<SidebarMenu>
+							<MockSidebarItem icon={PanelsTopLeftIcon} label="Overview" />
+							<MockSidebarItem icon={UsersRoundIcon} label="Members" />
+							<MockSidebarItem icon={MegaphoneIcon} label="Announcements" />
+							{isOrganizationOwner ? (
+								<>
+									<MockSidebarItem icon={MailPlusIcon} label="Invitations" />
+									<MockSidebarItem icon={BookOpenIcon} label="Course Setup" />
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/settings">
+													<Settings2Icon />
+													<span>Settings</span>
+												</Link>
+											}
+											isActive={activeItem === "settings"}
+											tooltip="Settings"
+										/>
+									</SidebarMenuItem>
+								</>
+							) : null}
+						</SidebarMenu>
+					</SidebarGroupContent>
+				</SidebarGroup>
 				{isAdmin ? (
 					<SidebarGroup>
 						<SidebarGroupLabel>Platform Admin</SidebarGroupLabel>
 						<SidebarGroupContent>
 							<SidebarMenu>
+								<MockSidebarItem
+									icon={GaugeIcon}
+									label="Overview"
+									tooltip="Platform overview"
+								/>
 								<SidebarMenuItem>
 									<SidebarMenuButton
 										render={
-											<a href="/admin/users">
+											<Link to="/admin/users">
 												<UsersRoundIcon />
 												<span>Users</span>
-											</a>
+											</Link>
 										}
+										isActive={activeItem === "users"}
 										tooltip="Users"
 									/>
 								</SidebarMenuItem>
-								<SidebarMenuItem>
-									<SidebarMenuButton tooltip="Organizations">
-										<Building2Icon />
-										<span>Organizations</span>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
-								<SidebarMenuItem>
-									<SidebarMenuButton tooltip="Audit log">
-										<ScrollTextIcon />
-										<span>Audit log</span>
-									</SidebarMenuButton>
-								</SidebarMenuItem>
+								<MockSidebarItem icon={Building2Icon} label="Organizations" />
+								<MockSidebarItem
+									icon={CreditCardIcon}
+									label="Plans & Billing"
+								/>
+								<MockSidebarItem icon={ScrollTextIcon} label="Audit Log" />
+								<MockSidebarItem
+									icon={SlidersHorizontalIcon}
+									label="System Settings"
+								/>
 							</SidebarMenu>
 						</SidebarGroupContent>
 					</SidebarGroup>
