@@ -87,6 +87,13 @@ export function AppSidebar({
 	...props
 }: AppSidebarProps) {
 	const isAdmin = user.role?.split(",").includes("admin") ?? false;
+	const organizationRoles = organizationRole?.split(",") ?? [];
+	const canManageOrganization = organizationRoles.some((role) =>
+		["owner", "admin"].includes(role),
+	);
+	const canManageCourses = organizationRoles.some((role) =>
+		["owner", "admin", "instructor", "course_manager"].includes(role),
+	);
 
 	return (
 		<Sidebar collapsible="icon" {...props}>
@@ -131,23 +138,25 @@ export function AppSidebar({
 							<MockSidebarItem icon={PanelsTopLeftIcon} label="Overview" />
 							<MockSidebarItem icon={UsersRoundIcon} label="Members" />
 							<MockSidebarItem icon={MegaphoneIcon} label="Announcements" />
+							{canManageOrganization ? (
+								<MockSidebarItem icon={MailPlusIcon} label="Invitations" />
+							) : null}
+							{canManageCourses ? (
+								<MockSidebarItem icon={BookOpenIcon} label="Course Setup" />
+							) : null}
 							{isOrganizationOwner ? (
-								<>
-									<MockSidebarItem icon={MailPlusIcon} label="Invitations" />
-									<MockSidebarItem icon={BookOpenIcon} label="Course Setup" />
-									<SidebarMenuItem>
-										<SidebarMenuButton
-											render={
-												<Link to="/workspace/settings">
-													<Settings2Icon />
-													<span>Settings</span>
-												</Link>
-											}
-											isActive={activeItem === "settings"}
-											tooltip="Settings"
-										/>
-									</SidebarMenuItem>
-								</>
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										render={
+											<Link to="/workspace/settings">
+												<Settings2Icon />
+												<span>Settings</span>
+											</Link>
+										}
+										isActive={activeItem === "settings"}
+										tooltip="Settings"
+									/>
+								</SidebarMenuItem>
 							) : null}
 						</SidebarMenu>
 					</SidebarGroupContent>
@@ -190,7 +199,11 @@ export function AppSidebar({
 				) : null}
 			</SidebarContent>
 			<SidebarFooter>
-				<NavUser user={user} isImpersonating={isImpersonating} />
+				<NavUser
+					user={user}
+					organizationRole={organizationRole}
+					isImpersonating={isImpersonating}
+				/>
 			</SidebarFooter>
 			<SidebarRail />
 		</Sidebar>

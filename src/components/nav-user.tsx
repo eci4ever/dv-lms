@@ -20,9 +20,11 @@ import {
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
+import { formatRole } from "@/lib/organization-permissions";
 
 export function NavUser({
 	user,
+	organizationRole,
 	isImpersonating,
 }: {
 	user: {
@@ -31,6 +33,7 @@ export function NavUser({
 		image?: string | null;
 		role?: string | null;
 	};
+	organizationRole?: string | null;
 	isImpersonating: boolean;
 }) {
 	const { isMobile } = useSidebar();
@@ -41,9 +44,12 @@ export function NavUser({
 		.join("")
 		.slice(0, 2)
 		.toUpperCase();
-	const roleLabel = user.role
-		?.split(",")[0]
-		.replace(/^./, (character) => character.toUpperCase());
+	const isPlatformAdmin = user.role?.split(",").includes("admin") ?? false;
+	const platformRoleLabel = isPlatformAdmin ? "Admin" : "Learner";
+	const organizationRoleLabel = organizationRole
+		?.split(",")
+		.map((role) => formatRole(role.trim()))
+		.join(", ");
 
 	async function signOut() {
 		await authClient.signOut();
@@ -75,11 +81,15 @@ export function NavUser({
 								<span className="min-w-0 flex-1 truncate text-xs">
 									{user.email}
 								</span>
-								{roleLabel ? (
+								{organizationRoleLabel ? (
 									<Badge className="shrink-0" variant="secondary">
-										{roleLabel}
+										{organizationRoleLabel}
 									</Badge>
-								) : null}
+								) : (
+									<Badge className="shrink-0" variant="secondary">
+										{platformRoleLabel}
+									</Badge>
+								)}
 							</div>
 						</div>
 						<ChevronsUpDownIcon
@@ -105,13 +115,16 @@ export function NavUser({
 									</Avatar>
 									<div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
 										<span className="truncate font-medium">{user.name}</span>
-										<div className="flex min-w-0 items-center gap-1">
-											<span className="min-w-0 flex-1 truncate text-xs">
-												{user.email}
-											</span>
-											{roleLabel ? (
-												<Badge className="shrink-0" variant="secondary">
-													{roleLabel}
+										<span className="truncate text-xs text-muted-foreground">
+											{user.email}
+										</span>
+										<div className="mt-1 flex flex-wrap gap-1">
+											<Badge variant="outline">
+												Platform: {platformRoleLabel}
+											</Badge>
+											{organizationRoleLabel ? (
+												<Badge variant="secondary">
+													Organization: {organizationRoleLabel}
 												</Badge>
 											) : null}
 										</div>

@@ -6,6 +6,10 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "@/lib/auth-schema";
+import {
+	organizationAccessControl,
+	organizationRoles,
+} from "@/lib/organization-permissions";
 
 const db = drizzle(env.DB, { schema });
 
@@ -42,5 +46,12 @@ export const auth = betterAuth({
 	},
 	secret: env.BETTER_AUTH_SECRET,
 	baseURL: env.BETTER_AUTH_URL,
-	plugins: [admin(), organization(), tanstackStartCookies()],
+	plugins: [
+		admin(),
+		organization({
+			ac: organizationAccessControl,
+			roles: organizationRoles,
+		}),
+		tanstackStartCookies(),
+	],
 });
