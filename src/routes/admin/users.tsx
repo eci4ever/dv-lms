@@ -20,6 +20,7 @@ import {
 	XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -150,7 +151,6 @@ function UserManagement() {
 	const [isSearching, setIsSearching] = useState(false);
 	const searchRequest = useRef(0);
 	const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [selectedUser, setSelectedUser] = useState<ManagedUser | null>(null);
 	const [selectedName, setSelectedName] = useState("");
@@ -182,7 +182,6 @@ function UserManagement() {
 		setPassword("");
 		setSessions([]);
 		setSessionsLoaded(false);
-		setError(null);
 	}, []);
 
 	const refreshUsers = useCallback(async () => {
@@ -195,7 +194,9 @@ function UserManagement() {
 		});
 
 		if (result.error) {
-			setError(result.error.message ?? "Unable to load users.");
+			toast.error(result.error.message ?? "Unable to load users.", {
+				id: "admin-users-load",
+			});
 		} else if (result.data) {
 			setUsers(result.data.users);
 			setResultTotal(result.data.total);
@@ -208,7 +209,6 @@ function UserManagement() {
 
 		const timeout = window.setTimeout(async () => {
 			setIsSearching(true);
-			setError(null);
 
 			if (!query) {
 				await refreshUsers();
@@ -237,7 +237,9 @@ function UserManagement() {
 
 			const failedResult = results.find((result) => result.error);
 			if (failedResult?.error) {
-				setError(failedResult.error.message ?? "Unable to search users.");
+				toast.error(failedResult.error.message ?? "Unable to search users.", {
+					id: "admin-users-search",
+				});
 			} else {
 				const matchedUsers = Array.from(
 					new Map(
@@ -258,12 +260,11 @@ function UserManagement() {
 
 	async function updateRole(userId: string, role: "admin" | "user") {
 		setUpdatingUserId(userId);
-		setError(null);
 
 		const result = await authClient.admin.setRole({ userId, role });
 
 		if (result.error) {
-			setError(result.error.message ?? "Unable to update this user's role.");
+			toast.error(result.error.message ?? "Unable to update this user's role.");
 		} else {
 			setUsers((currentUsers) =>
 				currentUsers.map((user) =>
@@ -271,6 +272,7 @@ function UserManagement() {
 				),
 			);
 			setSelectedUser((user) => (user ? { ...user, role } : null));
+			toast.success("Platform role updated");
 		}
 
 		setUpdatingUserId(null);
@@ -280,14 +282,13 @@ function UserManagement() {
 		event.preventDefault();
 		if (!selectedUser) return;
 		setIsSaving(true);
-		setError(null);
 		const result = await authClient.admin.updateUser({
 			userId: selectedUser.id,
 			data: { name: selectedName },
 		});
 
 		if (result.error) {
-			setError(result.error.message ?? "Unable to update this user.");
+			toast.error(result.error.message ?? "Unable to update this user.");
 		} else {
 			setUsers((currentUsers) =>
 				currentUsers.map((user) =>
@@ -297,6 +298,7 @@ function UserManagement() {
 			setSelectedUser((user) =>
 				user ? { ...user, name: selectedName } : null,
 			);
+			toast.success("User details updated");
 		}
 		setIsSaving(false);
 	}
@@ -305,15 +307,15 @@ function UserManagement() {
 		event.preventDefault();
 		if (!selectedUser || !password) return;
 		setIsSaving(true);
-		setError(null);
 		const result = await authClient.admin.setUserPassword({
 			userId: selectedUser.id,
 			newPassword: password,
 		});
 		if (result.error) {
-			setError(result.error.message ?? "Unable to reset the password.");
+			toast.error(result.error.message ?? "Unable to reset the password.");
 		} else {
 			setPassword("");
+			toast.success("Password reset successfully");
 		}
 		setIsSaving(false);
 	}
@@ -321,12 +323,11 @@ function UserManagement() {
 	async function toggleBan() {
 		if (!selectedUser) return;
 		setIsSaving(true);
-		setError(null);
 		const result = selectedUser.banned
 			? await authClient.admin.unbanUser({ userId: selectedUser.id })
 			: await authClient.admin.banUser({ userId: selectedUser.id });
 		if (result.error) {
-			setError(result.error.message ?? "Unable to update ban status.");
+			toast.error(result.error.message ?? "Unable to update ban status.");
 		} else {
 			const banned = !selectedUser.banned;
 			setUsers((currentUsers) =>
@@ -335,6 +336,7 @@ function UserManagement() {
 				),
 			);
 			setSelectedUser((user) => (user ? { ...user, banned } : null));
+			toast.success(banned ? "User banned" : "User unbanned");
 		}
 		setIsSaving(false);
 	}
@@ -342,12 +344,11 @@ function UserManagement() {
 	async function loadSessions() {
 		if (!selectedUser) return;
 		setIsSaving(true);
-		setError(null);
 		const result = await authClient.admin.listUserSessions({
 			userId: selectedUser.id,
 		});
 		if (result.error) {
-			setError(result.error.message ?? "Unable to load sessions.");
+			toast.error(result.error.message ?? "Unable to load sessions.");
 		} else if (result.data) {
 			setSessions(result.data.sessions);
 			setSessionsLoaded(true);
@@ -361,28 +362,32 @@ function UserManagement() {
 		const result = await authClient.admin.revokeUserSessions({
 			userId: selectedUser.id,
 		});
-		if (result.error)
-			setError(result.error.message ?? "Unable to revoke sessions.");
-		else setSessions([]);
+		if (result.error) {
+			toast.error(result.error.message ?? "Unable to revoke sessions.");
+		} else {
+			setSessions([]);
+			toast.success("All user sessions revoked");
+		}
 		setIsSaving(false);
 	}
 
 	async function revokeSession(sessionToken: string) {
 		setIsSaving(true);
 		const result = await authClient.admin.revokeUserSession({ sessionToken });
-		if (result.error)
-			setError(result.error.message ?? "Unable to revoke this session.");
-		else
+		if (result.error) {
+			toast.error(result.error.message ?? "Unable to revoke this session.");
+		} else {
 			setSessions((currentSessions) =>
 				currentSessions.filter((session) => session.token !== sessionToken),
 			);
+			toast.success("Session revoked");
+		}
 		setIsSaving(false);
 	}
 
 	async function createUser(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 		setIsSaving(true);
-		setError(null);
 
 		try {
 			await createAdminOrganizationUser({ data: newUser });
@@ -396,8 +401,11 @@ function UserManagement() {
 			setShowCreateUser(false);
 			setSearch("");
 			await refreshUsers();
+			toast.success("User created", {
+				description: "The account was added to the selected organization.",
+			});
 		} catch (error) {
-			setError(
+			toast.error(
 				error instanceof Error ? error.message : "Unable to create the user.",
 			);
 		} finally {
@@ -417,7 +425,7 @@ function UserManagement() {
 				userId: selectedUser.id,
 			});
 			if (result.error) {
-				setError(result.error.message ?? "Unable to impersonate this user.");
+				toast.error(result.error.message ?? "Unable to impersonate this user.");
 			} else {
 				const organizations = await authClient.organization.list();
 				const firstOrganization = organizations.data?.[0];
@@ -435,12 +443,14 @@ function UserManagement() {
 				userId: selectedUser.id,
 			});
 			if (result.error) {
-				setError(result.error.message ?? "Unable to remove this user.");
+				toast.error(result.error.message ?? "Unable to remove this user.");
 			} else {
+				const removedUserName = selectedUser.name;
 				setUsers((currentUsers) =>
 					currentUsers.filter((user) => user.id !== selectedUser.id),
 				);
 				setSelectedUser(null);
+				toast.success("User deleted", { description: removedUserName });
 			}
 		}
 
@@ -672,15 +682,6 @@ function UserManagement() {
 									</Button>
 								</div>
 							</div>
-
-							{error ? (
-								<div
-									className="border-b bg-destructive/5 px-4 py-3 text-sm text-destructive"
-									role="alert"
-								>
-									{error}
-								</div>
-							) : null}
 
 							<div className="overflow-x-auto">
 								<table className="w-full min-w-180 text-sm">
@@ -915,15 +916,6 @@ function UserManagement() {
 												</DialogDescription>
 											</DialogHeader>
 										</div>
-
-										{error ? (
-											<div
-												className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
-												role="alert"
-											>
-												{error}
-											</div>
-										) : null}
 
 										<div className="grid gap-4 md:grid-cols-2">
 											<section className="rounded-xl border p-4">

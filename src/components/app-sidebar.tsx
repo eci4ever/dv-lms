@@ -19,6 +19,7 @@ import {
 	UsersRoundIcon,
 } from "lucide-react";
 import type * as React from "react";
+import { toast } from "sonner";
 
 import { NavUser } from "@/components/nav-user";
 import { OrganizationSwitcher } from "@/components/organization-switcher";
@@ -101,7 +102,11 @@ export function AppSidebar({
 
 	async function stopImpersonating() {
 		const result = await authClient.admin.stopImpersonating();
-		if (!result.error) window.location.assign("/dashboard");
+		if (result.error) {
+			toast.error(result.error.message ?? "Unable to end impersonation.");
+			return;
+		}
+		window.location.assign("/dashboard");
 	}
 
 	return (

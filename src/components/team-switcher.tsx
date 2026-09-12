@@ -3,6 +3,7 @@
 import { useRouter } from "@tanstack/react-router";
 import { Building2Icon, ChevronsUpDownIcon } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -47,9 +48,17 @@ export function TeamSwitcher({
 			const result = await authClient.organization.setActive({
 				organizationId,
 			});
-			if (!result.error) {
-				await router.invalidate({ sync: true });
+			if (result.error) {
+				toast.error(result.error.message ?? "Unable to switch organization.");
+				return;
 			}
+			await router.invalidate({ sync: true });
+			toast.success("Organization switched", {
+				description:
+					organizations.find(
+						(organization) => organization.id === organizationId,
+					)?.name ?? "Your active organization has been updated.",
+			});
 		});
 	}
 

@@ -1,8 +1,8 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { CheckCircle2Icon, MailIcon } from "lucide-react";
+import { MailCheckIcon } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth-layout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getSession } from "@/lib/auth.functions";
@@ -18,13 +18,11 @@ export const Route = createFileRoute("/forgot-password")({
 
 function ForgotPasswordPage() {
 	const [email, setEmail] = useState("");
-	const [error, setError] = useState<string | null>(null);
 	const [isPending, setIsPending] = useState(false);
 	const [isSubmitted, setIsSubmitted] = useState(false);
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		setError(null);
 		setIsPending(true);
 
 		const result = await authClient.requestPasswordReset({
@@ -34,11 +32,14 @@ function ForgotPasswordPage() {
 
 		setIsPending(false);
 		if (result.error) {
-			setError("We could not process your request. Please try again.");
+			toast.error("We could not process your request. Please try again.");
 			return;
 		}
 
 		setIsSubmitted(true);
+		toast.success("Reset link requested", {
+			description: "Check your inbox for the next step.",
+		});
 	}
 
 	return (
@@ -55,15 +56,17 @@ function ForgotPasswordPage() {
 			}
 		>
 			{isSubmitted ? (
-				<div className="space-y-5">
-					<Alert>
-						<CheckCircle2Icon aria-hidden="true" />
-						<AlertTitle>Check your inbox</AlertTitle>
-						<AlertDescription>
+				<div className="space-y-5 text-center">
+					<div className="mx-auto grid size-11 place-items-center rounded-full bg-muted">
+						<MailCheckIcon className="size-5" aria-hidden="true" />
+					</div>
+					<div className="space-y-1.5">
+						<p className="font-medium">Check your inbox</p>
+						<p className="text-sm leading-6 text-muted-foreground">
 							If an account exists for {email}, we sent a password reset link.
 							It expires in 1 hour.
-						</AlertDescription>
-					</Alert>
+						</p>
+					</div>
 					<Button
 						className="h-10 w-full"
 						type="button"
@@ -90,13 +93,6 @@ function ForgotPasswordPage() {
 							required
 						/>
 					</div>
-					{error ? (
-						<Alert variant="destructive">
-							<MailIcon aria-hidden="true" />
-							<AlertTitle>Request failed</AlertTitle>
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					) : null}
 					<Button className="h-10 w-full" type="submit" disabled={isPending}>
 						{isPending ? "Sending reset link…" : "Send reset link"}
 					</Button>

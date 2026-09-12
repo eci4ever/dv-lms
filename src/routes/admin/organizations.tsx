@@ -22,6 +22,7 @@ import {
 	XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -197,7 +198,6 @@ function OrganizationManagement() {
 	const [sortBy, setSortBy] = useState<OrganizationSortField>("createdAt");
 	const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 	const [isLoading, setIsLoading] = useState(false);
-	const [pageError, setPageError] = useState<string | null>(null);
 	const listRequest = useRef(0);
 
 	const [isManageOpen, setIsManageOpen] = useState(false);
@@ -206,7 +206,6 @@ function OrganizationManagement() {
 	const [details, setDetails] = useState<OrganizationDetails | null>(null);
 	const [isDetailsLoading, setIsDetailsLoading] = useState(false);
 	const detailsRequest = useRef(0);
-	const [dialogError, setDialogError] = useState<string | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
 	const [organizationName, setOrganizationName] = useState("");
 	const [organizationSlug, setOrganizationSlug] = useState("");
@@ -226,7 +225,6 @@ function OrganizationManagement() {
 	const loadOrganizations = useCallback(async () => {
 		const requestId = ++listRequest.current;
 		setIsLoading(true);
-		setPageError(null);
 
 		try {
 			const result = await listAdminOrganizations({
@@ -250,7 +248,9 @@ function OrganizationManagement() {
 			setPageCount(result.pageCount);
 		} catch (error) {
 			if (requestId === listRequest.current) {
-				setPageError(getErrorMessage(error, "Unable to load organizations."));
+				toast.error(getErrorMessage(error, "Unable to load organizations."), {
+					id: "admin-organizations-load",
+				});
 			}
 		} finally {
 			if (requestId === listRequest.current) setIsLoading(false);
@@ -286,7 +286,6 @@ function OrganizationManagement() {
 			const requestId = ++detailsRequest.current;
 			setSelectedOrganization(organization);
 			setDetails(null);
-			setDialogError(null);
 			setMemberSearch("");
 			setAvailableUsers([]);
 			setNewMemberRole("student");
@@ -300,7 +299,7 @@ function OrganizationManagement() {
 				if (requestId === detailsRequest.current) applyDetails(result);
 			} catch (error) {
 				if (requestId === detailsRequest.current) {
-					setDialogError(
+					toast.error(
 						getErrorMessage(error, "Unable to load this organization."),
 					);
 				}
@@ -333,7 +332,9 @@ function OrganizationManagement() {
 				}
 			} catch (error) {
 				if (requestId === availableUsersRequest.current) {
-					setDialogError(getErrorMessage(error, "Unable to search users."));
+					toast.error(getErrorMessage(error, "Unable to search users."), {
+						id: "organization-member-search",
+					});
 				}
 			} finally {
 				if (requestId === availableUsersRequest.current) {
@@ -349,7 +350,6 @@ function OrganizationManagement() {
 		event.preventDefault();
 		if (!selectedOrganization) return;
 		setIsSaving(true);
-		setDialogError(null);
 
 		try {
 			const result = await updateAdminOrganization({
@@ -361,8 +361,9 @@ function OrganizationManagement() {
 			});
 			applyDetails(result);
 			await loadOrganizations();
+			toast.success("Organization updated");
 		} catch (error) {
-			setDialogError(getErrorMessage(error, "Unable to save changes."));
+			toast.error(getErrorMessage(error, "Unable to save changes."));
 		} finally {
 			setIsSaving(false);
 		}
@@ -371,7 +372,6 @@ function OrganizationManagement() {
 	async function addMember(userId: string) {
 		if (!selectedOrganization) return;
 		setIsSaving(true);
-		setDialogError(null);
 
 		try {
 			const result = await addAdminOrganizationMember({
@@ -385,8 +385,11 @@ function OrganizationManagement() {
 			setMemberSearch("");
 			setAvailableUsers([]);
 			await loadOrganizations();
+			toast.success("Member added", {
+				description: `Role: ${formatRole(newMemberRole)}`,
+			});
 		} catch (error) {
-			setDialogError(getErrorMessage(error, "Unable to add this member."));
+			toast.error(getErrorMessage(error, "Unable to add this member."));
 		} finally {
 			setIsSaving(false);
 		}
@@ -398,7 +401,6 @@ function OrganizationManagement() {
 	) {
 		if (!selectedOrganization) return;
 		setIsSaving(true);
-		setDialogError(null);
 
 		try {
 			const result = await updateAdminOrganizationMemberRole({
@@ -409,8 +411,11 @@ function OrganizationManagement() {
 				},
 			});
 			applyDetails(result);
+			toast.success("Member role updated", {
+				description: formatRole(role),
+			});
 		} catch (error) {
-			setDialogError(
+			toast.error(
 				getErrorMessage(error, "Unable to update this member's role."),
 			);
 		} finally {
@@ -421,7 +426,6 @@ function OrganizationManagement() {
 	async function confirmMemberRiskAction() {
 		if (!selectedOrganization || !memberRiskAction) return;
 		setIsSaving(true);
-		setDialogError(null);
 
 		try {
 			const request = {
@@ -433,10 +437,16 @@ function OrganizationManagement() {
 					? await transferAdminOrganizationOwnership({ data: request })
 					: await removeAdminOrganizationMember({ data: request });
 			applyDetails(result);
+			toast.success(
+				memberRiskAction.type === "transfer"
+					? "Organization ownership transferred"
+					: "Member removed",
+				{ description: memberRiskAction.member.name },
+			);
 			setMemberRiskAction(null);
 			await loadOrganizations();
 		} catch (error) {
-			setDialogError(
+			toast.error(
 				getErrorMessage(error, "Unable to update this organization."),
 			);
 		} finally {
@@ -447,9 +457,9 @@ function OrganizationManagement() {
 	async function confirmDeleteOrganization() {
 		if (!selectedOrganization) return;
 		setIsSaving(true);
-		setDialogError(null);
 
 		try {
+			const deletedOrganizationName = selectedOrganization.name;
 			await deleteAdminOrganization({
 				data: {
 					organizationId: selectedOrganization.id,
@@ -463,8 +473,11 @@ function OrganizationManagement() {
 			setDeleteConfirmation("");
 			if (page === 1) await loadOrganizations();
 			else setPage(1);
+			toast.success("Organization deleted", {
+				description: deletedOrganizationName,
+			});
 		} catch (error) {
-			setDialogError(getErrorMessage(error, "Unable to delete organization."));
+			toast.error(getErrorMessage(error, "Unable to delete organization."));
 			setIsDeleteOpen(false);
 		} finally {
 			setIsSaving(false);
@@ -694,15 +707,6 @@ function OrganizationManagement() {
 								</div>
 							</div>
 
-							{pageError ? (
-								<div
-									className="border-b bg-destructive/5 px-4 py-3 text-sm text-destructive"
-									role="alert"
-								>
-									{pageError}
-								</div>
-							) : null}
-
 							<div className="overflow-x-auto">
 								<table className="w-full min-w-220 text-sm">
 									<thead className="border-b bg-muted/50 text-left text-muted-foreground">
@@ -809,7 +813,6 @@ function OrganizationManagement() {
 					if (!open) {
 						setSelectedOrganization(null);
 						setDetails(null);
-						setDialogError(null);
 					}
 				}}
 			>
@@ -822,15 +825,6 @@ function OrganizationManagement() {
 							Review organization details, ownership, and member access.
 						</DialogDescription>
 					</DialogHeader>
-
-					{dialogError ? (
-						<div
-							className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
-							role="alert"
-						>
-							{dialogError}
-						</div>
-					) : null}
 
 					{isDetailsLoading ? (
 						<div className="grid gap-4 py-2">
@@ -872,10 +866,7 @@ function OrganizationManagement() {
 												<Input
 													id="organization-name"
 													value={organizationName}
-													onValueChange={(value) => {
-														setOrganizationName(value);
-														setDialogError(null);
-													}}
+													onValueChange={setOrganizationName}
 													minLength={2}
 													maxLength={80}
 													required
@@ -889,10 +880,7 @@ function OrganizationManagement() {
 												<Input
 													id="organization-slug"
 													value={organizationSlug}
-													onValueChange={(value) => {
-														setOrganizationSlug(value);
-														setDialogError(null);
-													}}
+													onValueChange={setOrganizationSlug}
 													minLength={2}
 													maxLength={64}
 													pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -957,10 +945,7 @@ function OrganizationManagement() {
 											<SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
 											<Input
 												value={memberSearch}
-												onValueChange={(value) => {
-													setMemberSearch(value);
-													setDialogError(null);
-												}}
+												onValueChange={setMemberSearch}
 												placeholder="Search existing users"
 												aria-label="Search users to add"
 												className="pl-8"

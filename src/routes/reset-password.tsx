@@ -1,15 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { CheckCircle2Icon, CircleAlertIcon } from "lucide-react";
+import { CircleAlertIcon } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth-layout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 
 interface ResetPasswordSearch {
 	error?: string;
-	success?: boolean;
 	token?: string;
 }
 
@@ -17,7 +16,6 @@ export const Route = createFileRoute("/reset-password")({
 	head: () => ({ meta: [{ title: "Reset password | DV LMS" }] }),
 	validateSearch: (search: Record<string, unknown>): ResetPasswordSearch => ({
 		error: typeof search.error === "string" ? search.error : undefined,
-		success: search.success === true || search.success === "true" || undefined,
 		token: typeof search.token === "string" ? search.token : undefined,
 	}),
 	component: ResetPasswordPage,
@@ -25,22 +23,19 @@ export const Route = createFileRoute("/reset-password")({
 
 function ResetPasswordPage() {
 	const navigate = useNavigate({ from: "/reset-password" });
-	const { error: tokenError, success, token } = Route.useSearch();
+	const { error: tokenError, token } = Route.useSearch();
 	const [password, setPassword] = useState("");
 	const [confirmPassword, setConfirmPassword] = useState("");
-	const [error, setError] = useState<string | null>(null);
 	const [isPending, setIsPending] = useState(false);
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		setError(null);
-
 		if (!token) {
-			setError("This reset link is invalid or has expired.");
+			toast.error("This reset link is invalid or has expired.");
 			return;
 		}
 		if (password !== confirmPassword) {
-			setError("Passwords do not match.");
+			toast.error("Passwords do not match.");
 			return;
 		}
 
@@ -52,7 +47,7 @@ function ResetPasswordPage() {
 		setIsPending(false);
 
 		if (result.error) {
-			setError(
+			toast.error(
 				result.error.code === "INVALID_TOKEN"
 					? "This reset link is invalid or has expired. Request a new one."
 					: (result.error.message ??
@@ -61,23 +56,18 @@ function ResetPasswordPage() {
 			return;
 		}
 
-		await navigate({
-			to: "/reset-password",
-			search: { success: true },
-			replace: true,
+		toast.success("Password updated", {
+			description: "Sign in with your new password.",
 		});
+		await navigate({ to: "/login", replace: true });
 	}
 
-	const invalidToken = Boolean(tokenError) || (!token && !success);
+	const invalidToken = Boolean(tokenError) || !token;
 
 	return (
 		<AuthLayout
-			title={success ? "Password reset" : "Choose a new password"}
-			description={
-				success
-					? "Your password has been updated successfully."
-					: "Use at least 8 characters for your new password."
-			}
+			title="Choose a new password"
+			description="Use at least 8 characters for your new password."
 			footer={
 				<Link
 					className="font-medium text-foreground underline underline-offset-4"
@@ -87,29 +77,17 @@ function ResetPasswordPage() {
 				</Link>
 			}
 		>
-			{success ? (
-				<div className="space-y-5">
-					<Alert>
-						<CheckCircle2Icon aria-hidden="true" />
-						<AlertTitle>Password updated</AlertTitle>
-						<AlertDescription>
-							You can now sign in with your new password. Other active sessions
-							have been signed out.
-						</AlertDescription>
-					</Alert>
-					<Button className="h-10 w-full" render={<Link to="/login" />}>
-						Sign in
-					</Button>
-				</div>
-			) : invalidToken ? (
-				<div className="space-y-5">
-					<Alert variant="destructive">
-						<CircleAlertIcon aria-hidden="true" />
-						<AlertTitle>Reset link unavailable</AlertTitle>
-						<AlertDescription>
+			{invalidToken ? (
+				<div className="space-y-5 text-center">
+					<div className="mx-auto grid size-11 place-items-center rounded-full bg-destructive/10 text-destructive">
+						<CircleAlertIcon className="size-5" aria-hidden="true" />
+					</div>
+					<div className="space-y-1.5">
+						<p className="font-medium">Reset link unavailable</p>
+						<p className="text-sm leading-6 text-muted-foreground">
 							This password reset link is invalid or has expired.
-						</AlertDescription>
-					</Alert>
+						</p>
+					</div>
 					<Button
 						className="h-10 w-full"
 						render={<Link to="/forgot-password" />}
@@ -155,13 +133,6 @@ function ResetPasswordPage() {
 							required
 						/>
 					</div>
-					{error ? (
-						<Alert variant="destructive">
-							<CircleAlertIcon aria-hidden="true" />
-							<AlertTitle>Password not changed</AlertTitle>
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					) : null}
 					<Button className="h-10 w-full" type="submit" disabled={isPending}>
 						{isPending ? "Updating password…" : "Reset password"}
 					</Button>

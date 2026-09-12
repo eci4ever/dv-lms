@@ -2,6 +2,7 @@
 
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronsUpDownIcon, LogOutIcon, ShieldCheckIcon } from "lucide-react";
+import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -52,13 +53,22 @@ export function NavUser({
 		.join(", ");
 
 	async function signOut() {
-		await authClient.signOut();
+		const result = await authClient.signOut();
+		if (result.error) {
+			toast.error(result.error.message ?? "Unable to sign out.");
+			return;
+		}
+		toast.success("Signed out successfully");
 		await navigate({ to: "/" });
 	}
 
 	async function stopImpersonating() {
 		const result = await authClient.admin.stopImpersonating();
-		if (!result.error) window.location.assign("/dashboard");
+		if (result.error) {
+			toast.error(result.error.message ?? "Unable to end impersonation.");
+			return;
+		}
+		window.location.assign("/dashboard");
 	}
 
 	return (

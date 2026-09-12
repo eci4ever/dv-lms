@@ -2,6 +2,7 @@
 
 import { useRouter } from "@tanstack/react-router";
 import { Building2Icon, ChevronsUpDownIcon } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
 	DropdownMenu,
@@ -51,7 +52,16 @@ export function OrganizationSwitcher({
 		if (organizationId === activeOrganization.id) return;
 
 		const result = await authClient.organization.setActive({ organizationId });
-		if (!result.error) await router.invalidate();
+		if (result.error) {
+			toast.error(result.error.message ?? "Unable to switch organization.");
+			return;
+		}
+		await router.invalidate();
+		toast.success("Organization switched", {
+			description:
+				organizations.find((organization) => organization.id === organizationId)
+					?.name ?? "Your active organization has been updated.",
+		});
 	}
 
 	return (

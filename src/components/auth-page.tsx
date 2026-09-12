@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { toast } from "sonner";
 import { AuthLayout } from "@/components/auth-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,6 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
-	const [error, setError] = useState<string | null>(null);
 	const [isPending, setIsPending] = useState(false);
 	const [createdUser, setCreatedUser] = useState<{
 		id: string;
@@ -33,19 +33,21 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 
 		if (result.error) {
 			setCreatedUser(user);
-			setError(
+			toast.error(
 				result.error.message ??
 					"Your account was created, but we could not set up your workspace.",
 			);
 			return;
 		}
 
+		toast.success("Account created", {
+			description: "Your workspace is ready.",
+		});
 		await navigate({ to: "/dashboard" });
 	}
 
 	async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		setError(null);
 		setIsPending(true);
 
 		if (isSignup) {
@@ -53,7 +55,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 			setIsPending(false);
 
 			if (result.error || !result.data?.user) {
-				setError(
+				toast.error(
 					result.error?.message ??
 						"Unable to create your account. Please try again.",
 				);
@@ -68,16 +70,18 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 		setIsPending(false);
 
 		if (result.error) {
-			setError(result.error.message ?? "Unable to sign in. Please try again.");
+			toast.error(
+				result.error.message ?? "Unable to sign in. Please try again.",
+			);
 			return;
 		}
 
+		toast.success("Signed in successfully");
 		await navigate({ to: "/dashboard" });
 	}
 
 	async function retryWorkspace() {
 		if (!createdUser) return;
-		setError(null);
 		setIsPending(true);
 		await createWorkspace(createdUser);
 		setIsPending(false);
@@ -161,11 +165,6 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 						required
 					/>
 				</div>
-				{error ? (
-					<p className="text-sm text-destructive" role="alert">
-						{error}
-					</p>
-				) : null}
 				<Button
 					className="mt-1 h-10 w-full"
 					type={createdUser ? "button" : "submit"}
