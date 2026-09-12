@@ -136,9 +136,19 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 					/>
 				</div>
 				<div className="space-y-2">
-					<label className="text-sm font-medium" htmlFor="password">
-						Password
-					</label>
+					<div className="flex items-center justify-between gap-4">
+						<label className="text-sm font-medium" htmlFor="password">
+							Password
+						</label>
+						{isSignup ? null : (
+							<Link
+								className="text-sm font-medium underline underline-offset-4"
+								to="/forgot-password"
+							>
+								Forgot password?
+							</Link>
+						)}
+					</div>
 					<Input
 						id="password"
 						name="password"

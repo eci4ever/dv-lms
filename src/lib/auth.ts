@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { env, waitUntil } from "cloudflare:workers";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
 import { admin, organization } from "better-auth/plugins";
@@ -6,6 +6,7 @@ import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "@/lib/auth-schema";
+import { sendPasswordResetEmail } from "@/lib/email";
 import {
 	organizationAccessControl,
 	organizationRoles,
@@ -20,6 +21,20 @@ export const auth = betterAuth({
 	}),
 	emailAndPassword: {
 		enabled: true,
+		resetPasswordTokenExpiresIn: 60 * 60,
+		revokeSessionsOnPasswordReset: true,
+		sendResetPassword: ({ user, url, token }) =>
+			sendPasswordResetEmail({
+				name: user.name,
+				to: user.email,
+				token,
+				url,
+			}),
+	},
+	advanced: {
+		backgroundTasks: {
+			handler: waitUntil,
+		},
 	},
 	databaseHooks: {
 		user: {
