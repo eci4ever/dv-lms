@@ -19,22 +19,22 @@ import {
 	SearchIcon,
 	ShieldCheckIcon,
 	SparklesIcon,
-	StarIcon,
 	TrendingUpIcon,
 	Users2Icon,
 } from "lucide-react";
+import { CourseCard as CatalogCourseCard } from "@/components/course-card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
 	CardDescription,
-	CardFooter,
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { listFeaturedCourses } from "@/lib/courses.functions";
 
 export const Route = createFileRoute("/")({
 	head: () => ({
@@ -47,59 +47,9 @@ export const Route = createFileRoute("/")({
 			},
 		],
 	}),
+	loader: () => listFeaturedCourses(),
 	component: Home,
 });
-
-const courses = [
-	{
-		title: "Complete Web Development Bootcamp",
-		instructor: "Amir Hakim",
-		category: "Development",
-		rating: "4.9",
-		students: "12,480",
-		price: "RM89",
-		oldPrice: "RM249",
-		badge: "Bestseller",
-		icon: Code2Icon,
-		lessons: "42 lessons",
-	},
-	{
-		title: "UI/UX Design from Zero to Portfolio",
-		instructor: "Sarah Lim",
-		category: "Design",
-		rating: "4.8",
-		students: "8,920",
-		price: "RM69",
-		oldPrice: "RM199",
-		badge: "Popular",
-		icon: PaletteIcon,
-		lessons: "31 lessons",
-	},
-	{
-		title: "Excel Essentials for the Workplace",
-		instructor: "Nadia Rahman",
-		category: "Business",
-		rating: "4.7",
-		students: "16,205",
-		price: "Free",
-		oldPrice: null,
-		badge: "Free course",
-		icon: BarChart3Icon,
-		lessons: "18 lessons",
-	},
-	{
-		title: "Speak English with Confidence",
-		instructor: "Daniel Wong",
-		category: "Language",
-		rating: "4.9",
-		students: "6,740",
-		price: "RM49",
-		oldPrice: "RM129",
-		badge: "New",
-		icon: LanguagesIcon,
-		lessons: "26 lessons",
-	},
-];
 
 const categories: Array<{
 	name: string;
@@ -175,76 +125,8 @@ function SectionHeading({
 	);
 }
 
-function Rating({ value }: { value: string }) {
-	return (
-		<div className="flex items-center gap-1.5 text-xs">
-			<span className="font-semibold">{value}</span>
-			<span className="flex gap-0.5" aria-hidden="true">
-				{["star-1", "star-2", "star-3", "star-4", "star-5"].map((star) => (
-					<StarIcon key={star} className="size-3 fill-current" />
-				))}
-			</span>
-		</div>
-	);
-}
-
-function CourseCard({ course }: { course: (typeof courses)[number] }) {
-	const Icon = course.icon;
-
-	return (
-		<Card className="group h-full gap-0 py-0 transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg">
-			<div className="relative aspect-[16/10] overflow-hidden border-b bg-muted">
-				<div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,transparent_48%,var(--border)_48%,var(--border)_52%,transparent_52%,transparent_100%)] bg-[length:22px_22px] opacity-60" />
-				<div className="absolute inset-5 flex items-end justify-between rounded-lg border bg-background/90 p-4 shadow-sm backdrop-blur-sm">
-					<div>
-						<p className="text-xs font-medium text-muted-foreground">
-							{course.category}
-						</p>
-						<p className="mt-1 text-lg font-semibold">Learn by doing</p>
-					</div>
-					<span className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground">
-						<Icon className="size-5" aria-hidden="true" />
-					</span>
-				</div>
-				<Badge className="absolute top-3 left-3" variant="secondary">
-					{course.badge}
-				</Badge>
-			</div>
-			<CardHeader className="gap-2 pt-4">
-				<div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-					<span>{course.category}</span>
-					<span>{course.lessons}</span>
-				</div>
-				<CardTitle className="line-clamp-2 text-base font-semibold">
-					{course.title}
-				</CardTitle>
-				<CardDescription>{course.instructor}</CardDescription>
-			</CardHeader>
-			<CardContent className="mt-auto pb-4">
-				<div className="flex items-center gap-2 text-muted-foreground">
-					<Rating value={course.rating} />
-					<span className="text-xs">({course.students})</span>
-				</div>
-			</CardContent>
-			<CardFooter className="justify-between border-t px-4 py-3">
-				<div className="flex items-baseline gap-2">
-					<span className="text-base font-semibold">{course.price}</span>
-					{course.oldPrice ? (
-						<span className="text-xs text-muted-foreground line-through">
-							{course.oldPrice}
-						</span>
-					) : null}
-				</div>
-				<span className="flex items-center gap-1 text-xs font-medium">
-					View course
-					<ChevronRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-				</span>
-			</CardFooter>
-		</Card>
-	);
-}
-
 function Home() {
+	const featuredCourses = Route.useLoaderData();
 	return (
 		<main
 			id="top"
@@ -483,20 +365,30 @@ function Home() {
 						title="Courses learners love"
 						description="Build job-ready skills with highly rated courses from experienced instructors. Start with a free course or invest in a complete learning path."
 					/>
-					<a
+					<Link
 						className="group flex shrink-0 items-center gap-1 text-sm font-semibold"
-						href="#categories"
+						to="/courses"
 					>
 						Browse all courses
 						<ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-1" />
-					</a>
+					</Link>
 				</div>
 
-				<div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-					{courses.map((course) => (
-						<CourseCard key={course.title} course={course} />
-					))}
-				</div>
+				{featuredCourses.length ? (
+					<div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+						{featuredCourses.map((course) => (
+							<CatalogCourseCard key={course.id} course={course} />
+						))}
+					</div>
+				) : (
+					<div className="mt-10 rounded-xl border border-dashed bg-card px-6 py-12 text-center">
+						<BookOpenCheckIcon className="mx-auto size-9 text-muted-foreground" />
+						<h3 className="mt-4 font-medium">Courses are coming soon</h3>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Published courses will appear here.
+						</p>
+					</div>
+				)}
 			</section>
 
 			<section id="categories" className="border-y bg-muted/40">
