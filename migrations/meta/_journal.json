@@ -15,6 +15,13 @@
       "when": 1789221005856,
       "tag": "0001_nasty_the_renegades",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789269728927,
+      "tag": "0002_slippery_major_mapleleaf",
+      "breakpoints": true
     }
   ]
 }

@@ -169,12 +169,79 @@ export const invitation = sqliteTable(
 	],
 );
 
+export const course = sqliteTable(
+	"course",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		creatorId: text("creator_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "restrict" }),
+		slug: text("slug").notNull().unique(),
+		title: text("title").notNull(),
+		summary: text("summary").default("").notNull(),
+		description: text("description").default("").notNull(),
+		category: text("category").notNull(),
+		level: text("level").default("all-levels").notNull(),
+		language: text("language").default("English").notNull(),
+		thumbnailUrl: text("thumbnail_url"),
+		priceInSen: integer("price_in_sen").default(0).notNull(),
+		originalPriceInSen: integer("original_price_in_sen"),
+		status: text("status").default("draft").notNull(),
+		publishedAt: integer("published_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("course_organizationId_idx").on(table.organizationId),
+		index("course_status_idx").on(table.status),
+		index("course_category_idx").on(table.category),
+	],
+);
+
+export const courseSection = sqliteTable(
+	"course_section",
+	{
+		id: text("id").primaryKey(),
+		courseId: text("course_id")
+			.notNull()
+			.references(() => course.id, { onDelete: "cascade" }),
+		title: text("title").notNull(),
+		position: integer("position").notNull(),
+	},
+	(table) => [index("courseSection_courseId_idx").on(table.courseId)],
+);
+
+export const lesson = sqliteTable(
+	"lesson",
+	{
+		id: text("id").primaryKey(),
+		sectionId: text("section_id")
+			.notNull()
+			.references(() => courseSection.id, { onDelete: "cascade" }),
+		title: text("title").notNull(),
+		content: text("content").default("").notNull(),
+		videoUrl: text("video_url"),
+		durationMinutes: integer("duration_minutes").default(0).notNull(),
+		position: integer("position").notNull(),
+	},
+	(table) => [index("lesson_sectionId_idx").on(table.sectionId)],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),
 	twoFactors: many(twoFactor),
 	members: many(member),
 	invitations: many(invitation),
+	coursesCreated: many(course),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -201,6 +268,37 @@ export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
 export const organizationRelations = relations(organization, ({ many }) => ({
 	members: many(member),
 	invitations: many(invitation),
+	courses: many(course),
+}));
+
+export const courseRelations = relations(course, ({ many, one }) => ({
+	organization: one(organization, {
+		fields: [course.organizationId],
+		references: [organization.id],
+	}),
+	creator: one(user, {
+		fields: [course.creatorId],
+		references: [user.id],
+	}),
+	sections: many(courseSection),
+}));
+
+export const courseSectionRelations = relations(
+	courseSection,
+	({ many, one }) => ({
+		course: one(course, {
+			fields: [courseSection.courseId],
+			references: [course.id],
+		}),
+		lessons: many(lesson),
+	}),
+);
+
+export const lessonRelations = relations(lesson, ({ one }) => ({
+	section: one(courseSection, {
+		fields: [lesson.sectionId],
+		references: [courseSection.id],
+	}),
 }));
 
 export const memberRelations = relations(member, ({ one }) => ({

@@ -56,18 +56,16 @@ const roles = [
 	},
 	{
 		name: "Admin",
-		description:
-			"Manage members, invitations, courses, enrollments, and sales reports.",
+		description: "Manage members, invitations, enrollments, and sales reports.",
 	},
 	{
 		name: "Instructor",
-		description:
-			"Create and teach courses, manage learners, and view analytics.",
+		description: "Teach assigned courses, manage learners, and view analytics.",
 	},
 	{
 		name: "Course Manager",
 		description:
-			"Review, organize, publish, and maintain the organization's course catalog.",
+			"Review the organization's course catalog and support course operations.",
 	},
 	{
 		name: "Student",

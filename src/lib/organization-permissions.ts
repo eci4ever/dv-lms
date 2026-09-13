@@ -36,20 +36,20 @@ const owner = organizationAccessControl.newRole({
 
 const admin = organizationAccessControl.newRole({
 	...adminAc.statements,
-	course: ["create", "read", "update", "delete", "publish"],
+	course: ["read"],
 	enrollment: ["read", "update"],
 	commerce: ["read"],
 	analytics: ["read"],
 });
 
 const instructor = organizationAccessControl.newRole({
-	course: ["create", "read", "update"],
+	course: ["read"],
 	enrollment: ["read", "update"],
 	analytics: ["read"],
 });
 
 const courseManager = organizationAccessControl.newRole({
-	course: ["create", "read", "update", "delete", "publish"],
+	course: ["read"],
 	enrollment: ["read"],
 	analytics: ["read"],
 });
