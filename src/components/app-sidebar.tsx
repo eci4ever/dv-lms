@@ -57,7 +57,13 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	isOrganizationOwner: boolean;
 	organizationRole?: string | null;
 	isImpersonating: boolean;
-	activeItem?: "account" | "dashboard" | "organizations" | "settings" | "users";
+	activeItem?:
+		| "account"
+		| "courses"
+		| "dashboard"
+		| "organizations"
+		| "settings"
+		| "users";
 }
 
 interface MockSidebarItemProps {
@@ -98,9 +104,6 @@ export function AppSidebar({
 	const organizationRoles = organizationRole?.split(",") ?? [];
 	const canManageOrganization = organizationRoles.some((role) =>
 		["owner", "admin"].includes(role),
-	);
-	const canManageCourses = organizationRoles.some((role) =>
-		["owner", "admin", "instructor", "course_manager"].includes(role),
 	);
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
@@ -161,10 +164,17 @@ export function AppSidebar({
 											icon={ChartNoAxesColumnIncreasingIcon}
 											label="Progress"
 										/>
-										<MockSidebarItem
-											icon={LibraryIcon}
-											label="Course Catalog"
-										/>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/courses">
+														<LibraryIcon />
+														<span>Course Catalog</span>
+													</Link>
+												}
+												tooltip="Course Catalog"
+											/>
+										</SidebarMenuItem>
 									</SidebarMenu>
 								</SidebarGroupContent>
 							</SidebarGroup>
@@ -187,11 +197,19 @@ export function AppSidebar({
 												label="Invitations"
 											/>
 										) : null}
-										{canManageCourses ? (
-											<MockSidebarItem
-												icon={BookOpenIcon}
-												label="Course Setup"
-											/>
+										{isOrganizationOwner ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													render={
+														<Link to="/workspace/courses">
+															<BookOpenIcon />
+															<span>Course Setup</span>
+														</Link>
+													}
+													isActive={activeItem === "courses"}
+													tooltip="Course Setup"
+												/>
+											</SidebarMenuItem>
 										) : null}
 										{isOrganizationOwner ? (
 											<SidebarMenuItem>

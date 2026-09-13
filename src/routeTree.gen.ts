@@ -19,8 +19,12 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as CoursesIndexRouteImport } from './routes/courses/index'
+import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
 import { Route as WorkspaceSettingsRouteImport } from './routes/workspace/settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as WorkspaceCoursesIndexRouteImport } from './routes/workspace/courses/index'
+import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/workspace/courses/$courseId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -72,6 +76,16 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoursesIndexRoute = CoursesIndexRouteImport.update({
+  id: '/courses/',
+  path: '/courses/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CoursesSlugRoute = CoursesSlugRouteImport.update({
+  id: '/courses/$slug',
+  path: '/courses/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
   id: '/workspace/settings',
   path: '/workspace/settings',
@@ -82,6 +96,17 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceCoursesIndexRoute = WorkspaceCoursesIndexRouteImport.update({
+  id: '/workspace/courses/',
+  path: '/workspace/courses/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceCoursesCourseIdRoute =
+  WorkspaceCoursesCourseIdRouteImport.update({
+    id: '/workspace/courses/$courseId',
+    path: '/workspace/courses/$courseId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,8 +119,12 @@ export interface FileRoutesByFullPath {
   '/two-factor': typeof TwoFactorRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/courses/$slug': typeof CoursesSlugRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
+  '/courses/': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/workspace/courses/': typeof WorkspaceCoursesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -108,8 +137,12 @@ export interface FileRoutesByTo {
   '/two-factor': typeof TwoFactorRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/courses/$slug': typeof CoursesSlugRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
+  '/courses': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/workspace/courses': typeof WorkspaceCoursesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -123,8 +156,12 @@ export interface FileRoutesById {
   '/two-factor': typeof TwoFactorRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/courses/$slug': typeof CoursesSlugRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
+  '/courses/': typeof CoursesIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/workspace/courses/': typeof WorkspaceCoursesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -139,8 +176,12 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/admin/organizations'
     | '/admin/users'
+    | '/courses/$slug'
     | '/workspace/settings'
+    | '/courses/'
     | '/api/auth/$'
+    | '/workspace/courses/$courseId'
+    | '/workspace/courses/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -153,8 +194,12 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/admin/organizations'
     | '/admin/users'
+    | '/courses/$slug'
     | '/workspace/settings'
+    | '/courses'
     | '/api/auth/$'
+    | '/workspace/courses/$courseId'
+    | '/workspace/courses'
   id:
     | '__root__'
     | '/'
@@ -167,8 +212,12 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/admin/organizations'
     | '/admin/users'
+    | '/courses/$slug'
     | '/workspace/settings'
+    | '/courses/'
     | '/api/auth/$'
+    | '/workspace/courses/$courseId'
+    | '/workspace/courses/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -182,8 +231,12 @@ export interface RootRouteChildren {
   TwoFactorRoute: typeof TwoFactorRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminUsersRoute: typeof AdminUsersRoute
+  CoursesSlugRoute: typeof CoursesSlugRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
+  CoursesIndexRoute: typeof CoursesIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  WorkspaceCoursesCourseIdRoute: typeof WorkspaceCoursesCourseIdRoute
+  WorkspaceCoursesIndexRoute: typeof WorkspaceCoursesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -258,6 +311,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/courses/': {
+      id: '/courses/'
+      path: '/courses'
+      fullPath: '/courses/'
+      preLoaderRoute: typeof CoursesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/courses/$slug': {
+      id: '/courses/$slug'
+      path: '/courses/$slug'
+      fullPath: '/courses/$slug'
+      preLoaderRoute: typeof CoursesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace/settings': {
       id: '/workspace/settings'
       path: '/workspace/settings'
@@ -270,6 +337,20 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/courses/': {
+      id: '/workspace/courses/'
+      path: '/workspace/courses'
+      fullPath: '/workspace/courses/'
+      preLoaderRoute: typeof WorkspaceCoursesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/courses/$courseId': {
+      id: '/workspace/courses/$courseId'
+      path: '/workspace/courses/$courseId'
+      fullPath: '/workspace/courses/$courseId'
+      preLoaderRoute: typeof WorkspaceCoursesCourseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -286,8 +367,12 @@ const rootRouteChildren: RootRouteChildren = {
   TwoFactorRoute: TwoFactorRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminUsersRoute: AdminUsersRoute,
+  CoursesSlugRoute: CoursesSlugRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
+  CoursesIndexRoute: CoursesIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  WorkspaceCoursesCourseIdRoute: WorkspaceCoursesCourseIdRoute,
+  WorkspaceCoursesIndexRoute: WorkspaceCoursesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
