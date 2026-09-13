@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { getSession } from "@/lib/auth.functions";
 import { listFeaturedCourses } from "@/lib/courses.functions";
 
 export const Route = createFileRoute("/")({
@@ -47,7 +48,13 @@ export const Route = createFileRoute("/")({
 			},
 		],
 	}),
-	loader: () => listFeaturedCourses(),
+	loader: async () => {
+		const [featuredCourses, hasSession] = await Promise.all([
+			listFeaturedCourses(),
+			getSession(),
+		]);
+		return { featuredCourses, hasSession };
+	},
 	component: Home,
 });
 
@@ -126,7 +133,7 @@ function SectionHeading({
 }
 
 function Home() {
-	const featuredCourses = Route.useLoaderData();
+	const { featuredCourses, hasSession } = Route.useLoaderData();
 	return (
 		<main
 			id="top"
@@ -185,23 +192,35 @@ function Home() {
 					</div>
 
 					<div className="flex items-center gap-2">
-						<Link
-							className={buttonVariants({
-								variant: "ghost",
-								className: "hidden sm:inline-flex",
-							})}
-							to="/login"
-							preload="intent"
-						>
-							Sign in
-						</Link>
-						<Link
-							className={buttonVariants({ className: "h-10 px-4" })}
-							to="/signup"
-							preload="intent"
-						>
-							Join for free
-						</Link>
+						{hasSession ? (
+							<Link
+								className={buttonVariants({ className: "h-10 px-4" })}
+								to="/dashboard"
+								preload="intent"
+							>
+								Dashboard
+							</Link>
+						) : (
+							<>
+								<Link
+									className={buttonVariants({
+										variant: "ghost",
+										className: "hidden sm:inline-flex",
+									})}
+									to="/login"
+									preload="intent"
+								>
+									Sign in
+								</Link>
+								<Link
+									className={buttonVariants({ className: "h-10 px-4" })}
+									to="/signup"
+									preload="intent"
+								>
+									Join for free
+								</Link>
+							</>
+						)}
 					</div>
 				</div>
 			</header>
