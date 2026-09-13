@@ -1,4 +1,9 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	useNavigate,
+} from "@tanstack/react-router";
 import {
 	BookOpenCheckIcon,
 	BookOpenIcon,
@@ -6,11 +11,14 @@ import {
 	Globe2Icon,
 	GraduationCapIcon,
 	Layers3Icon,
+	LoaderCircleIcon,
 	PlayCircleIcon,
 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -19,21 +27,30 @@ import {
 	levelLabel,
 } from "@/lib/course-types";
 import { getPublicCourse } from "@/lib/courses.functions";
+import {
+	enrollInFreeCourse,
+	getEnrollmentState,
+} from "@/lib/learning.functions";
 
 export const Route = createFileRoute("/courses/$slug")({
 	loader: async ({ params }) => {
-		const course = await getPublicCourse({ data: { slug: params.slug } });
+		const [course, enrollmentState] = await Promise.all([
+			getPublicCourse({ data: { slug: params.slug } }),
+			getEnrollmentState({ data: { slug: params.slug } }),
+		]);
 		if (!course) throw notFound();
-		return course;
+		return { course, enrollmentState };
 	},
 	head: ({ loaderData }) => ({
 		meta: [
 			{
-				title: loaderData ? `${loaderData.title} | DV LMS` : "Course | DV LMS",
+				title: loaderData
+					? `${loaderData.course.title} | DV LMS`
+					: "Course | DV LMS",
 			},
 			{
 				name: "description",
-				content: loaderData?.summary ?? "Explore this DV LMS course.",
+				content: loaderData?.course.summary ?? "Explore this DV LMS course.",
 			},
 		],
 	}),
@@ -41,7 +58,7 @@ export const Route = createFileRoute("/courses/$slug")({
 });
 
 function PublicCourseDetail() {
-	const course = Route.useLoaderData();
+	const { course, enrollmentState } = Route.useLoaderData();
 
 	return (
 		<main className="min-h-svh bg-background">
@@ -124,18 +141,11 @@ function PublicCourseDetail() {
 									</span>
 								) : null}
 							</div>
-							<Link
-								to="/login"
-								search={{}}
-								className={buttonVariants({ size: "lg", className: "w-full" })}
-							>
-								{course.priceInSen === 0
-									? "Sign in to enroll"
-									: "Sign in to continue"}
-							</Link>
-							<p className="text-center text-xs text-muted-foreground">
-								Enrollment and checkout will be available in the next phase.
-							</p>
+							<EnrollmentAction
+								slug={course.slug}
+								priceInSen={course.priceInSen}
+								state={enrollmentState}
+							/>
 						</CardContent>
 					</Card>
 				</div>
@@ -218,5 +228,102 @@ function PublicCourseDetail() {
 				</aside>
 			</div>
 		</main>
+	);
+}
+
+function EnrollmentAction({
+	slug,
+	priceInSen,
+	state,
+}: {
+	slug: string;
+	priceInSen: number;
+	state: Awaited<ReturnType<typeof getEnrollmentState>>;
+}) {
+	const navigate = useNavigate();
+	const [busy, setBusy] = useState(false);
+
+	if (!state.signedIn) {
+		return (
+			<>
+				<Link
+					to="/login"
+					className={buttonVariants({ size: "lg", className: "w-full" })}
+				>
+					Sign in to enroll
+				</Link>
+				<p className="text-center text-xs text-muted-foreground">
+					Create an account or sign in to start learning.
+				</p>
+			</>
+		);
+	}
+
+	if (state.enrollment) {
+		return state.enrollment.firstLessonId ? (
+			<Button
+				render={
+					<Link
+						to="/learning/$slug/$lessonId"
+						params={{
+							slug,
+							lessonId: state.enrollment.firstLessonId,
+						}}
+					/>
+				}
+				size="lg"
+				className="w-full"
+			>
+				Continue learning
+			</Button>
+		) : (
+			<Button size="lg" className="w-full" disabled>
+				No lessons available
+			</Button>
+		);
+	}
+
+	if (priceInSen > 0) {
+		return (
+			<>
+				<Button size="lg" className="w-full" disabled>
+					Checkout coming soon
+				</Button>
+				<p className="text-center text-xs text-muted-foreground">
+					Paid checkout will be enabled after a payment provider is connected.
+				</p>
+			</>
+		);
+	}
+
+	async function enroll() {
+		setBusy(true);
+		try {
+			const result = await enrollInFreeCourse({ data: { slug } });
+			toast.success("You are enrolled in this course.");
+			if (result.firstLessonId) {
+				await navigate({
+					to: "/learning/$slug/$lessonId",
+					params: { slug, lessonId: result.firstLessonId },
+				});
+			} else {
+				await navigate({ to: "/learning" });
+			}
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: "Unable to enroll in the course.",
+			);
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	return (
+		<Button size="lg" className="w-full" disabled={busy} onClick={enroll}>
+			{busy ? <LoaderCircleIcon className="animate-spin" /> : null}
+			Enroll for free
+		</Button>
 	);
 }

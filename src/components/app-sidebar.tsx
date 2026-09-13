@@ -61,6 +61,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "account"
 		| "courses"
 		| "dashboard"
+		| "learning"
 		| "organizations"
 		| "settings"
 		| "users";
@@ -155,7 +156,18 @@ export function AppSidebar({
 												tooltip="Dashboard"
 											/>
 										</SidebarMenuItem>
-										<MockSidebarItem icon={BookOpenIcon} label="My Courses" />
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/learning">
+														<BookOpenIcon />
+														<span>My Courses</span>
+													</Link>
+												}
+												isActive={activeItem === "learning"}
+												tooltip="My Courses"
+											/>
+										</SidebarMenuItem>
 										<MockSidebarItem
 											icon={ClipboardCheckIcon}
 											label="Assignments"

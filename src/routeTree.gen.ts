@@ -21,8 +21,10 @@ import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizat
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
+import { Route as LearningIndexRouteImport } from './routes/learning/index'
 import { Route as WorkspaceSettingsRouteImport } from './routes/workspace/settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as LearningSlugLessonIdRouteImport } from './routes/learning/$slug/$lessonId'
 import { Route as WorkspaceCoursesIndexRouteImport } from './routes/workspace/courses/index'
 import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/workspace/courses/$courseId'
 
@@ -86,6 +88,11 @@ const CoursesSlugRoute = CoursesSlugRouteImport.update({
   path: '/courses/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LearningIndexRoute = LearningIndexRouteImport.update({
+  id: '/learning/',
+  path: '/learning/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
   id: '/workspace/settings',
   path: '/workspace/settings',
@@ -94,6 +101,11 @@ const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearningSlugLessonIdRoute = LearningSlugLessonIdRouteImport.update({
+  id: '/learning/$slug/$lessonId',
+  path: '/learning/$slug/$lessonId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceCoursesIndexRoute = WorkspaceCoursesIndexRouteImport.update({
@@ -122,7 +134,9 @@ export interface FileRoutesByFullPath {
   '/courses/$slug': typeof CoursesSlugRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/courses/': typeof CoursesIndexRoute
+  '/learning/': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/learning/$slug/$lessonId': typeof LearningSlugLessonIdRoute
   '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/workspace/courses/': typeof WorkspaceCoursesIndexRoute
 }
@@ -140,7 +154,9 @@ export interface FileRoutesByTo {
   '/courses/$slug': typeof CoursesSlugRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/courses': typeof CoursesIndexRoute
+  '/learning': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/learning/$slug/$lessonId': typeof LearningSlugLessonIdRoute
   '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/workspace/courses': typeof WorkspaceCoursesIndexRoute
 }
@@ -159,7 +175,9 @@ export interface FileRoutesById {
   '/courses/$slug': typeof CoursesSlugRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/courses/': typeof CoursesIndexRoute
+  '/learning/': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/learning/$slug/$lessonId': typeof LearningSlugLessonIdRoute
   '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
   '/workspace/courses/': typeof WorkspaceCoursesIndexRoute
 }
@@ -179,7 +197,9 @@ export interface FileRouteTypes {
     | '/courses/$slug'
     | '/workspace/settings'
     | '/courses/'
+    | '/learning/'
     | '/api/auth/$'
+    | '/learning/$slug/$lessonId'
     | '/workspace/courses/$courseId'
     | '/workspace/courses/'
   fileRoutesByTo: FileRoutesByTo
@@ -197,7 +217,9 @@ export interface FileRouteTypes {
     | '/courses/$slug'
     | '/workspace/settings'
     | '/courses'
+    | '/learning'
     | '/api/auth/$'
+    | '/learning/$slug/$lessonId'
     | '/workspace/courses/$courseId'
     | '/workspace/courses'
   id:
@@ -215,7 +237,9 @@ export interface FileRouteTypes {
     | '/courses/$slug'
     | '/workspace/settings'
     | '/courses/'
+    | '/learning/'
     | '/api/auth/$'
+    | '/learning/$slug/$lessonId'
     | '/workspace/courses/$courseId'
     | '/workspace/courses/'
   fileRoutesById: FileRoutesById
@@ -234,7 +258,9 @@ export interface RootRouteChildren {
   CoursesSlugRoute: typeof CoursesSlugRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
+  LearningIndexRoute: typeof LearningIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  LearningSlugLessonIdRoute: typeof LearningSlugLessonIdRoute
   WorkspaceCoursesCourseIdRoute: typeof WorkspaceCoursesCourseIdRoute
   WorkspaceCoursesIndexRoute: typeof WorkspaceCoursesIndexRoute
 }
@@ -325,6 +351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoursesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/learning/': {
+      id: '/learning/'
+      path: '/learning'
+      fullPath: '/learning/'
+      preLoaderRoute: typeof LearningIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace/settings': {
       id: '/workspace/settings'
       path: '/workspace/settings'
@@ -337,6 +370,13 @@ declare module '@tanstack/react-router' {
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learning/$slug/$lessonId': {
+      id: '/learning/$slug/$lessonId'
+      path: '/learning/$slug/$lessonId'
+      fullPath: '/learning/$slug/$lessonId'
+      preLoaderRoute: typeof LearningSlugLessonIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/courses/': {
@@ -370,7 +410,9 @@ const rootRouteChildren: RootRouteChildren = {
   CoursesSlugRoute: CoursesSlugRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   CoursesIndexRoute: CoursesIndexRoute,
+  LearningIndexRoute: LearningIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  LearningSlugLessonIdRoute: LearningSlugLessonIdRoute,
   WorkspaceCoursesCourseIdRoute: WorkspaceCoursesCourseIdRoute,
   WorkspaceCoursesIndexRoute: WorkspaceCoursesIndexRoute,
 }
