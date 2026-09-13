@@ -1,5 +1,11 @@
 import { relations, sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+	index,
+	integer,
+	sqliteTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
 	id: text("id").primaryKey(),
@@ -235,6 +241,63 @@ export const lesson = sqliteTable(
 	(table) => [index("lesson_sectionId_idx").on(table.sectionId)],
 );
 
+export const enrollment = sqliteTable(
+	"enrollment",
+	{
+		id: text("id").primaryKey(),
+		courseId: text("course_id")
+			.notNull()
+			.references(() => course.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		status: text("status").default("active").notNull(),
+		enrolledAt: integer("enrolled_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("enrollment_course_user_unique").on(
+			table.courseId,
+			table.userId,
+		),
+		index("enrollment_userId_idx").on(table.userId),
+		index("enrollment_courseId_idx").on(table.courseId),
+	],
+);
+
+export const lessonProgress = sqliteTable(
+	"lesson_progress",
+	{
+		id: text("id").primaryKey(),
+		enrollmentId: text("enrollment_id")
+			.notNull()
+			.references(() => enrollment.id, { onDelete: "cascade" }),
+		lessonId: text("lesson_id")
+			.notNull()
+			.references(() => lesson.id, { onDelete: "cascade" }),
+		positionSeconds: integer("position_seconds").default(0).notNull(),
+		completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("lessonProgress_enrollment_lesson_unique").on(
+			table.enrollmentId,
+			table.lessonId,
+		),
+		index("lessonProgress_enrollmentId_idx").on(table.enrollmentId),
+		index("lessonProgress_lessonId_idx").on(table.lessonId),
+	],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),
@@ -242,6 +305,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	members: many(member),
 	invitations: many(invitation),
 	coursesCreated: many(course),
+	enrollments: many(enrollment),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -281,6 +345,7 @@ export const courseRelations = relations(course, ({ many, one }) => ({
 		references: [user.id],
 	}),
 	sections: many(courseSection),
+	enrollments: many(enrollment),
 }));
 
 export const courseSectionRelations = relations(
@@ -294,10 +359,34 @@ export const courseSectionRelations = relations(
 	}),
 );
 
-export const lessonRelations = relations(lesson, ({ one }) => ({
+export const lessonRelations = relations(lesson, ({ many, one }) => ({
 	section: one(courseSection, {
 		fields: [lesson.sectionId],
 		references: [courseSection.id],
+	}),
+	progress: many(lessonProgress),
+}));
+
+export const enrollmentRelations = relations(enrollment, ({ many, one }) => ({
+	course: one(course, {
+		fields: [enrollment.courseId],
+		references: [course.id],
+	}),
+	user: one(user, {
+		fields: [enrollment.userId],
+		references: [user.id],
+	}),
+	lessonProgress: many(lessonProgress),
+}));
+
+export const lessonProgressRelations = relations(lessonProgress, ({ one }) => ({
+	enrollment: one(enrollment, {
+		fields: [lessonProgress.enrollmentId],
+		references: [enrollment.id],
+	}),
+	lesson: one(lesson, {
+		fields: [lessonProgress.lessonId],
+		references: [lesson.id],
 	}),
 }));
 
