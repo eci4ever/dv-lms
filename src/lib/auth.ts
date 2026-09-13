@@ -1,12 +1,12 @@
 import { env, waitUntil } from "cloudflare:workers";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
-import { admin, organization } from "better-auth/plugins";
+import { admin, organization, twoFactor } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "@/lib/auth-schema";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { sendEmailVerification, sendPasswordResetEmail } from "@/lib/email";
 import {
 	organizationAccessControl,
 	organizationRoles,
@@ -15,6 +15,7 @@ import {
 const db = drizzle(env.DB, { schema });
 
 export const auth = betterAuth({
+	appName: "DV LMS",
 	database: drizzleAdapter(db, {
 		provider: "sqlite",
 		schema,
@@ -25,6 +26,16 @@ export const auth = betterAuth({
 		revokeSessionsOnPasswordReset: true,
 		sendResetPassword: ({ user, url, token }) =>
 			sendPasswordResetEmail({
+				name: user.name,
+				to: user.email,
+				token,
+				url,
+			}),
+	},
+	emailVerification: {
+		expiresIn: 60 * 60,
+		sendVerificationEmail: ({ user, url, token }) =>
+			sendEmailVerification({
 				name: user.name,
 				to: user.email,
 				token,
@@ -63,6 +74,7 @@ export const auth = betterAuth({
 	baseURL: env.BETTER_AUTH_URL,
 	plugins: [
 		admin(),
+		twoFactor({ issuer: "DV LMS" }),
 		organization({
 			ac: organizationAccessControl,
 			roles: organizationRoles,

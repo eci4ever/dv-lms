@@ -75,6 +75,13 @@ export function AuthPage({ mode }: { mode: "login" | "signup" }) {
 			);
 			return;
 		}
+		if (
+			result.data &&
+			"twoFactorRedirect" in result.data &&
+			result.data.twoFactorRedirect
+		) {
+			return;
+		}
 
 		toast.success("Signed in successfully");
 		await navigate({ to: "/dashboard" });

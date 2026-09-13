@@ -1,7 +1,12 @@
 "use client";
 
-import { useNavigate } from "@tanstack/react-router";
-import { ChevronsUpDownIcon, LogOutIcon, ShieldCheckIcon } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import {
+	ChevronsUpDownIcon,
+	LogOutIcon,
+	ShieldCheckIcon,
+	UserRoundCogIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -166,6 +171,13 @@ export function NavUser({
 									</div>
 								</div>
 							</DropdownMenuLabel>
+						</DropdownMenuGroup>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
+							<DropdownMenuItem render={<Link to="/account" />}>
+								<UserRoundCogIcon />
+								Account
+							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						{isImpersonating ? (

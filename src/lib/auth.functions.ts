@@ -40,6 +40,7 @@ export const getDashboardSession = createServerFn({ method: "GET" }).handler(
 			session: {
 				user: session.user,
 				session: {
+					id: session.session.id,
 					activeOrganizationId: session.session.activeOrganizationId,
 					impersonatedBy: session.session.impersonatedBy,
 				},

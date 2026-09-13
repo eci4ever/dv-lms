@@ -1,5 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
+	ArrowLeftIcon,
 	BookOpenIcon,
 	Building2Icon,
 	ChartNoAxesColumnIncreasingIcon,
@@ -18,7 +19,7 @@ import {
 	SlidersHorizontalIcon,
 	UsersRoundIcon,
 } from "lucide-react";
-import type * as React from "react";
+import * as React from "react";
 import { toast } from "sonner";
 
 import { NavUser } from "@/components/nav-user";
@@ -56,7 +57,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	isOrganizationOwner: boolean;
 	organizationRole?: string | null;
 	isImpersonating: boolean;
-	activeItem?: "dashboard" | "organizations" | "settings" | "users";
+	activeItem?: "account" | "dashboard" | "organizations" | "settings" | "users";
 }
 
 interface MockSidebarItemProps {
@@ -64,6 +65,8 @@ interface MockSidebarItemProps {
 	label: string;
 	tooltip?: string;
 }
+
+type SidebarView = "main" | "platform-admin";
 
 function MockSidebarItem({
 	icon: Icon,
@@ -99,6 +102,17 @@ export function AppSidebar({
 	const canManageCourses = organizationRoles.some((role) =>
 		["owner", "admin", "instructor", "course_manager"].includes(role),
 	);
+	const pathname = useRouterState({
+		select: (state) => state.location.pathname,
+	});
+	const isPlatformAdminPage = pathname.startsWith("/admin");
+	const [view, setView] = React.useState<SidebarView>(() =>
+		isPlatformAdminPage ? "platform-admin" : "main",
+	);
+
+	React.useEffect(() => {
+		setView(isPlatformAdminPage ? "platform-admin" : "main");
+	}, [isPlatformAdminPage]);
 
 	async function stopImpersonating() {
 		const result = await authClient.admin.stopImpersonating();
@@ -120,112 +134,165 @@ export function AppSidebar({
 					/>
 				</SidebarHeader>
 				<SidebarContent>
-					<SidebarGroup>
-						<SidebarGroupLabel>Main</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								<SidebarMenuItem>
-									<SidebarMenuButton
-										render={
-											<Link to="/dashboard">
-												<LayoutDashboardIcon />
-												<span>Dashboard</span>
-											</Link>
-										}
-										isActive={activeItem === "dashboard"}
-										tooltip="Dashboard"
-									/>
-								</SidebarMenuItem>
-								<MockSidebarItem icon={BookOpenIcon} label="My Courses" />
-								<MockSidebarItem
-									icon={ClipboardCheckIcon}
-									label="Assignments"
-								/>
-								<MockSidebarItem
-									icon={ChartNoAxesColumnIncreasingIcon}
-									label="Progress"
-								/>
-								<MockSidebarItem icon={LibraryIcon} label="Course Catalog" />
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
-					<SidebarGroup>
-						<SidebarGroupLabel>Workspace</SidebarGroupLabel>
-						<SidebarGroupContent>
-							<SidebarMenu>
-								<MockSidebarItem icon={PanelsTopLeftIcon} label="Overview" />
-								<MockSidebarItem icon={UsersRoundIcon} label="Members" />
-								<MockSidebarItem icon={MegaphoneIcon} label="Announcements" />
-								{canManageOrganization ? (
-									<MockSidebarItem icon={MailPlusIcon} label="Invitations" />
-								) : null}
-								{canManageCourses ? (
-									<MockSidebarItem icon={BookOpenIcon} label="Course Setup" />
-								) : null}
-								{isOrganizationOwner ? (
-									<SidebarMenuItem>
-										<SidebarMenuButton
-											render={
-												<Link to="/workspace/settings">
-													<Settings2Icon />
-													<span>Settings</span>
-												</Link>
-											}
-											isActive={activeItem === "settings"}
-											tooltip="Settings"
+					{view === "main" ? (
+						<>
+							<SidebarGroup>
+								<SidebarGroupLabel>Main</SidebarGroupLabel>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/dashboard">
+														<LayoutDashboardIcon />
+														<span>Dashboard</span>
+													</Link>
+												}
+												isActive={activeItem === "dashboard"}
+												tooltip="Dashboard"
+											/>
+										</SidebarMenuItem>
+										<MockSidebarItem icon={BookOpenIcon} label="My Courses" />
+										<MockSidebarItem
+											icon={ClipboardCheckIcon}
+											label="Assignments"
 										/>
-									</SidebarMenuItem>
-								) : null}
-							</SidebarMenu>
-						</SidebarGroupContent>
-					</SidebarGroup>
-					{isAdmin ? (
-						<SidebarGroup>
-							<SidebarGroupLabel>Platform Admin</SidebarGroupLabel>
-							<SidebarGroupContent>
+										<MockSidebarItem
+											icon={ChartNoAxesColumnIncreasingIcon}
+											label="Progress"
+										/>
+										<MockSidebarItem
+											icon={LibraryIcon}
+											label="Course Catalog"
+										/>
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
+							<SidebarGroup>
+								<SidebarGroupLabel>Workspace</SidebarGroupLabel>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										<MockSidebarItem
+											icon={PanelsTopLeftIcon}
+											label="Overview"
+										/>
+										<MockSidebarItem icon={UsersRoundIcon} label="Members" />
+										<MockSidebarItem
+											icon={MegaphoneIcon}
+											label="Announcements"
+										/>
+										{canManageOrganization ? (
+											<MockSidebarItem
+												icon={MailPlusIcon}
+												label="Invitations"
+											/>
+										) : null}
+										{canManageCourses ? (
+											<MockSidebarItem
+												icon={BookOpenIcon}
+												label="Course Setup"
+											/>
+										) : null}
+										{isOrganizationOwner ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													render={
+														<Link to="/workspace/settings">
+															<Settings2Icon />
+															<span>Settings</span>
+														</Link>
+													}
+													isActive={activeItem === "settings"}
+													tooltip="Settings"
+												/>
+											</SidebarMenuItem>
+										) : null}
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
+							{isAdmin ? (
+								<SidebarGroup>
+									<SidebarGroupLabel>Administration</SidebarGroupLabel>
+									<SidebarGroupContent>
+										<SidebarMenu>
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													type="button"
+													tooltip="Platform Admin"
+													onClick={() => setView("platform-admin")}
+												>
+													<ShieldCheckIcon />
+													<span>Platform Admin</span>
+												</SidebarMenuButton>
+											</SidebarMenuItem>
+										</SidebarMenu>
+									</SidebarGroupContent>
+								</SidebarGroup>
+							) : null}
+						</>
+					) : (
+						<>
+							<SidebarGroup>
 								<SidebarMenu>
-									<MockSidebarItem
-										icon={GaugeIcon}
-										label="Overview"
-										tooltip="Platform overview"
-									/>
 									<SidebarMenuItem>
 										<SidebarMenuButton
-											render={
-												<Link to="/admin/users">
-													<UsersRoundIcon />
-													<span>Users</span>
-												</Link>
-											}
-											isActive={activeItem === "users"}
-											tooltip="Users"
-										/>
+											type="button"
+											tooltip="Back to main"
+											onClick={() => setView("main")}
+										>
+											<ArrowLeftIcon />
+											<span>Back to main</span>
+										</SidebarMenuButton>
 									</SidebarMenuItem>
-									<SidebarMenuItem>
-										<SidebarMenuButton
-											render={
-												<Link to="/admin/organizations">
-													<Building2Icon />
-													<span>Organizations</span>
-												</Link>
-											}
-											isActive={activeItem === "organizations"}
-											tooltip="Organizations"
-										/>
-									</SidebarMenuItem>
-									<MockSidebarItem
-										icon={CreditCardIcon}
-										label="Plans & Billing"
-									/>
-									<MockSidebarItem icon={ScrollTextIcon} label="Audit Log" />
-									<MockSidebarItem
-										icon={SlidersHorizontalIcon}
-										label="System Settings"
-									/>
 								</SidebarMenu>
-							</SidebarGroupContent>
-						</SidebarGroup>
-					) : null}
+							</SidebarGroup>
+							<SidebarGroup>
+								<SidebarGroupLabel>Platform Admin</SidebarGroupLabel>
+								<SidebarGroupContent>
+									<SidebarMenu>
+										<MockSidebarItem
+											icon={GaugeIcon}
+											label="Overview"
+											tooltip="Platform overview"
+										/>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/admin/users">
+														<UsersRoundIcon />
+														<span>Users</span>
+													</Link>
+												}
+												isActive={activeItem === "users"}
+												tooltip="Users"
+											/>
+										</SidebarMenuItem>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/admin/organizations">
+														<Building2Icon />
+														<span>Organizations</span>
+													</Link>
+												}
+												isActive={activeItem === "organizations"}
+												tooltip="Organizations"
+											/>
+										</SidebarMenuItem>
+										<MockSidebarItem
+											icon={CreditCardIcon}
+											label="Plans & Billing"
+										/>
+										<MockSidebarItem icon={ScrollTextIcon} label="Audit Log" />
+										<MockSidebarItem
+											icon={SlidersHorizontalIcon}
+											label="System Settings"
+										/>
+									</SidebarMenu>
+								</SidebarGroupContent>
+							</SidebarGroup>
+						</>
+					)}
 				</SidebarContent>
 				<SidebarFooter>
 					<NavUser
