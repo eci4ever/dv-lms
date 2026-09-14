@@ -298,6 +298,71 @@ export const lessonProgress = sqliteTable(
 	],
 );
 
+export const courseOrder = sqliteTable(
+	"course_order",
+	{
+		id: text("id").primaryKey(),
+		buyerId: text("buyer_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "restrict" }),
+		courseId: text("course_id")
+			.notNull()
+			.references(() => course.id, { onDelete: "restrict" }),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "restrict" }),
+		currency: text("currency").default("MYR").notNull(),
+		grossInSen: integer("gross_in_sen").notNull(),
+		platformFeeInSen: integer("platform_fee_in_sen").notNull(),
+		sellerNetInSen: integer("seller_net_in_sen").notNull(),
+		status: text("status").default("pending").notNull(),
+		mockPaymentReference: text("mock_payment_reference").unique(),
+		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
+		paidAt: integer("paid_at", { mode: "timestamp_ms" }),
+		refundedAt: integer("refunded_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("courseOrder_buyerId_idx").on(table.buyerId),
+		index("courseOrder_courseId_idx").on(table.courseId),
+		index("courseOrder_organizationId_idx").on(table.organizationId),
+		index("courseOrder_status_idx").on(table.status),
+	],
+);
+
+export const refundRequest = sqliteTable(
+	"refund_request",
+	{
+		id: text("id").primaryKey(),
+		orderId: text("order_id")
+			.notNull()
+			.references(() => courseOrder.id, { onDelete: "cascade" }),
+		requesterId: text("requester_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "restrict" }),
+		reason: text("reason").notNull(),
+		status: text("status").default("pending").notNull(),
+		resolvedBy: text("resolved_by").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		resolutionNote: text("resolution_note"),
+		requestedAt: integer("requested_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		resolvedAt: integer("resolved_at", { mode: "timestamp_ms" }),
+	},
+	(table) => [
+		uniqueIndex("refundRequest_orderId_unique").on(table.orderId),
+		index("refundRequest_status_idx").on(table.status),
+	],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),
@@ -306,6 +371,9 @@ export const userRelations = relations(user, ({ many }) => ({
 	invitations: many(invitation),
 	coursesCreated: many(course),
 	enrollments: many(enrollment),
+	courseOrders: many(courseOrder),
+	refundRequests: many(refundRequest, { relationName: "refundRequester" }),
+	refundsResolved: many(refundRequest, { relationName: "refundResolver" }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -333,6 +401,7 @@ export const organizationRelations = relations(organization, ({ many }) => ({
 	members: many(member),
 	invitations: many(invitation),
 	courses: many(course),
+	courseOrders: many(courseOrder),
 }));
 
 export const courseRelations = relations(course, ({ many, one }) => ({
@@ -346,6 +415,7 @@ export const courseRelations = relations(course, ({ many, one }) => ({
 	}),
 	sections: many(courseSection),
 	enrollments: many(enrollment),
+	orders: many(courseOrder),
 }));
 
 export const courseSectionRelations = relations(
@@ -387,6 +457,39 @@ export const lessonProgressRelations = relations(lessonProgress, ({ one }) => ({
 	lesson: one(lesson, {
 		fields: [lessonProgress.lessonId],
 		references: [lesson.id],
+	}),
+}));
+
+export const courseOrderRelations = relations(courseOrder, ({ many, one }) => ({
+	buyer: one(user, {
+		fields: [courseOrder.buyerId],
+		references: [user.id],
+	}),
+	course: one(course, {
+		fields: [courseOrder.courseId],
+		references: [course.id],
+	}),
+	organization: one(organization, {
+		fields: [courseOrder.organizationId],
+		references: [organization.id],
+	}),
+	refundRequests: many(refundRequest),
+}));
+
+export const refundRequestRelations = relations(refundRequest, ({ one }) => ({
+	order: one(courseOrder, {
+		fields: [refundRequest.orderId],
+		references: [courseOrder.id],
+	}),
+	requester: one(user, {
+		fields: [refundRequest.requesterId],
+		references: [user.id],
+		relationName: "refundRequester",
+	}),
+	resolver: one(user, {
+		fields: [refundRequest.resolvedBy],
+		references: [user.id],
+		relationName: "refundResolver",
 	}),
 }));
 

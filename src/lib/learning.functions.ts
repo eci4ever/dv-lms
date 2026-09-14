@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { auth } from "@/lib/auth";
@@ -93,6 +93,7 @@ export const getEnrollmentState = createServerFn({ method: "GET" })
 				and(
 					eq(schema.enrollment.courseId, schema.course.id),
 					eq(schema.enrollment.userId, session.user.id),
+					inArray(schema.enrollment.status, ["active", "completed"]),
 				),
 			)
 			.where(
@@ -134,7 +135,7 @@ export const enrollInFreeCourse = createServerFn({ method: "POST" })
 			throw new Error("This course requires checkout.");
 		}
 		const [existing] = await db
-			.select({ id: schema.enrollment.id })
+			.select({ id: schema.enrollment.id, status: schema.enrollment.status })
 			.from(schema.enrollment)
 			.where(
 				and(
@@ -150,6 +151,11 @@ export const enrollInFreeCourse = createServerFn({ method: "POST" })
 				courseId: course.id,
 				userId: session.user.id,
 			});
+		} else if (existing.status === "cancelled") {
+			await db
+				.update(schema.enrollment)
+				.set({ status: "active", completedAt: null, updatedAt: new Date() })
+				.where(eq(schema.enrollment.id, existing.id));
 		}
 		return {
 			enrollmentId,
@@ -208,6 +214,7 @@ export const listMyLearning = createServerFn({ method: "GET" }).handler(
 			.where(
 				and(
 					eq(schema.enrollment.userId, session.user.id),
+					inArray(schema.enrollment.status, ["active", "completed"]),
 					ne(schema.course.status, "draft"),
 				),
 			)
@@ -240,6 +247,7 @@ export const getLearningCourse = createServerFn({ method: "GET" })
 			.where(
 				and(
 					eq(schema.enrollment.userId, session.user.id),
+					inArray(schema.enrollment.status, ["active", "completed"]),
 					eq(schema.course.slug, data.slug),
 					ne(schema.course.status, "draft"),
 				),
@@ -327,6 +335,7 @@ export const updateLessonProgress = createServerFn({ method: "POST" })
 			.where(
 				and(
 					eq(schema.enrollment.userId, session.user.id),
+					inArray(schema.enrollment.status, ["active", "completed"]),
 					ne(schema.course.status, "draft"),
 				),
 			)
