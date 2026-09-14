@@ -7,6 +7,7 @@ import {
 	ClipboardCheckIcon,
 	CreditCardIcon,
 	GaugeIcon,
+	Layers3Icon,
 	LayoutDashboardIcon,
 	LibraryIcon,
 	type LucideIcon,
@@ -17,6 +18,7 @@ import {
 	Settings2Icon,
 	ShieldCheckIcon,
 	SlidersHorizontalIcon,
+	StoreIcon,
 	UsersRoundIcon,
 } from "lucide-react";
 import * as React from "react";
@@ -65,8 +67,10 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "organizations"
 		| "orders"
 		| "purchases"
+		| "products"
 		| "sales"
 		| "settings"
+		| "storefront"
 		| "users";
 }
 
@@ -223,6 +227,34 @@ export function AppSidebar({
 												icon={MailPlusIcon}
 												label="Invitations"
 											/>
+										) : null}
+										{isOrganizationOwner ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													render={
+														<Link to="/workspace/storefront">
+															<StoreIcon />
+															<span>Storefront</span>
+														</Link>
+													}
+													isActive={activeItem === "storefront"}
+													tooltip="Storefront"
+												/>
+											</SidebarMenuItem>
+										) : null}
+										{isOrganizationOwner ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													render={
+														<Link to="/workspace/products">
+															<Layers3Icon />
+															<span>Products</span>
+														</Link>
+													}
+													isActive={activeItem === "products"}
+													tooltip="Products"
+												/>
+											</SidebarMenuItem>
 										) : null}
 										{isOrganizationOwner ? (
 											<SidebarMenuItem>

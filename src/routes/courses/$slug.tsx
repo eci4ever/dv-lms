@@ -103,10 +103,14 @@ function PublicCourseDetail() {
 								<GraduationCapIcon className="size-4" />
 								{course.creatorName}
 							</span>
-							<span className="flex items-center gap-2">
+							<Link
+								to="/creators/$slug"
+								params={{ slug: course.organizationSlug }}
+								className="flex items-center gap-2 hover:text-foreground"
+							>
 								<BookOpenIcon className="size-4" />
 								{course.organizationName}
-							</span>
+							</Link>
 							<span className="flex items-center gap-2">
 								<Globe2Icon className="size-4" />
 								{course.language}

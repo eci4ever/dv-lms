@@ -274,6 +274,7 @@ const courseCardSelection = {
 	createdAt: schema.course.createdAt,
 	updatedAt: schema.course.updatedAt,
 	organizationName: schema.organization.name,
+	organizationSlug: schema.organization.slug,
 	creatorName: schema.user.name,
 	lessonCount: sql<number>`count(distinct ${schema.lesson.id})`,
 	durationMinutes: sql<number>`coalesce(sum(${schema.lesson.durationMinutes}), 0)`,

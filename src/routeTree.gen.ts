@@ -24,13 +24,18 @@ import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as CheckoutOrderIdRouteImport } from './routes/checkout/$orderId'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
+import { Route as CreatorsSlugRouteImport } from './routes/creators/$slug'
 import { Route as LearningIndexRouteImport } from './routes/learning/index'
 import { Route as WorkspaceSalesRouteImport } from './routes/workspace/sales'
 import { Route as WorkspaceSettingsRouteImport } from './routes/workspace/settings'
+import { Route as WorkspaceStorefrontRouteImport } from './routes/workspace/storefront'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as LearningSlugLessonIdRouteImport } from './routes/learning/$slug/$lessonId'
 import { Route as WorkspaceCoursesIndexRouteImport } from './routes/workspace/courses/index'
 import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/workspace/courses/$courseId'
+import { Route as WorkspaceProductsIndexRouteImport } from './routes/workspace/products/index'
+import { Route as WorkspaceProductsProductIdRouteImport } from './routes/workspace/products/$productId'
+import { Route as CreatorsCreatorSlugProductsProductSlugRouteImport } from './routes/creators/$creatorSlug/products/$productSlug'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -107,6 +112,11 @@ const CoursesSlugRoute = CoursesSlugRouteImport.update({
   path: '/courses/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreatorsSlugRoute = CreatorsSlugRouteImport.update({
+  id: '/creators/$slug',
+  path: '/creators/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LearningIndexRoute = LearningIndexRouteImport.update({
   id: '/learning/',
   path: '/learning/',
@@ -120,6 +130,11 @@ const WorkspaceSalesRoute = WorkspaceSalesRouteImport.update({
 const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
   id: '/workspace/settings',
   path: '/workspace/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceStorefrontRoute = WorkspaceStorefrontRouteImport.update({
+  id: '/workspace/storefront',
+  path: '/workspace/storefront',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -143,6 +158,23 @@ const WorkspaceCoursesCourseIdRoute =
     path: '/workspace/courses/$courseId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const WorkspaceProductsIndexRoute = WorkspaceProductsIndexRouteImport.update({
+  id: '/workspace/products/',
+  path: '/workspace/products/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceProductsProductIdRoute =
+  WorkspaceProductsProductIdRouteImport.update({
+    id: '/workspace/products/$productId',
+    path: '/workspace/products/$productId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CreatorsCreatorSlugProductsProductSlugRoute =
+  CreatorsCreatorSlugProductsProductSlugRouteImport.update({
+    id: '/creators/$creatorSlug/products/$productSlug',
+    path: '/creators/$creatorSlug/products/$productSlug',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -159,14 +191,19 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
+  '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
+  '/workspace/storefront': typeof WorkspaceStorefrontRoute
   '/courses/': typeof CoursesIndexRoute
   '/learning/': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/learning/$slug/$lessonId': typeof LearningSlugLessonIdRoute
   '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/workspace/products/$productId': typeof WorkspaceProductsProductIdRoute
   '/workspace/courses/': typeof WorkspaceCoursesIndexRoute
+  '/workspace/products/': typeof WorkspaceProductsIndexRoute
+  '/creators/$creatorSlug/products/$productSlug': typeof CreatorsCreatorSlugProductsProductSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -183,14 +220,19 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
+  '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
+  '/workspace/storefront': typeof WorkspaceStorefrontRoute
   '/courses': typeof CoursesIndexRoute
   '/learning': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/learning/$slug/$lessonId': typeof LearningSlugLessonIdRoute
   '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/workspace/products/$productId': typeof WorkspaceProductsProductIdRoute
   '/workspace/courses': typeof WorkspaceCoursesIndexRoute
+  '/workspace/products': typeof WorkspaceProductsIndexRoute
+  '/creators/$creatorSlug/products/$productSlug': typeof CreatorsCreatorSlugProductsProductSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -208,14 +250,19 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
+  '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
+  '/workspace/storefront': typeof WorkspaceStorefrontRoute
   '/courses/': typeof CoursesIndexRoute
   '/learning/': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/learning/$slug/$lessonId': typeof LearningSlugLessonIdRoute
   '/workspace/courses/$courseId': typeof WorkspaceCoursesCourseIdRoute
+  '/workspace/products/$productId': typeof WorkspaceProductsProductIdRoute
   '/workspace/courses/': typeof WorkspaceCoursesIndexRoute
+  '/workspace/products/': typeof WorkspaceProductsIndexRoute
+  '/creators/$creatorSlug/products/$productSlug': typeof CreatorsCreatorSlugProductsProductSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -234,14 +281,19 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/checkout/$orderId'
     | '/courses/$slug'
+    | '/creators/$slug'
     | '/workspace/sales'
     | '/workspace/settings'
+    | '/workspace/storefront'
     | '/courses/'
     | '/learning/'
     | '/api/auth/$'
     | '/learning/$slug/$lessonId'
     | '/workspace/courses/$courseId'
+    | '/workspace/products/$productId'
     | '/workspace/courses/'
+    | '/workspace/products/'
+    | '/creators/$creatorSlug/products/$productSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -258,14 +310,19 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/checkout/$orderId'
     | '/courses/$slug'
+    | '/creators/$slug'
     | '/workspace/sales'
     | '/workspace/settings'
+    | '/workspace/storefront'
     | '/courses'
     | '/learning'
     | '/api/auth/$'
     | '/learning/$slug/$lessonId'
     | '/workspace/courses/$courseId'
+    | '/workspace/products/$productId'
     | '/workspace/courses'
+    | '/workspace/products'
+    | '/creators/$creatorSlug/products/$productSlug'
   id:
     | '__root__'
     | '/'
@@ -282,14 +339,19 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/checkout/$orderId'
     | '/courses/$slug'
+    | '/creators/$slug'
     | '/workspace/sales'
     | '/workspace/settings'
+    | '/workspace/storefront'
     | '/courses/'
     | '/learning/'
     | '/api/auth/$'
     | '/learning/$slug/$lessonId'
     | '/workspace/courses/$courseId'
+    | '/workspace/products/$productId'
     | '/workspace/courses/'
+    | '/workspace/products/'
+    | '/creators/$creatorSlug/products/$productSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -307,14 +369,19 @@ export interface RootRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   CheckoutOrderIdRoute: typeof CheckoutOrderIdRoute
   CoursesSlugRoute: typeof CoursesSlugRoute
+  CreatorsSlugRoute: typeof CreatorsSlugRoute
   WorkspaceSalesRoute: typeof WorkspaceSalesRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
+  WorkspaceStorefrontRoute: typeof WorkspaceStorefrontRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   LearningSlugLessonIdRoute: typeof LearningSlugLessonIdRoute
   WorkspaceCoursesCourseIdRoute: typeof WorkspaceCoursesCourseIdRoute
+  WorkspaceProductsProductIdRoute: typeof WorkspaceProductsProductIdRoute
   WorkspaceCoursesIndexRoute: typeof WorkspaceCoursesIndexRoute
+  WorkspaceProductsIndexRoute: typeof WorkspaceProductsIndexRoute
+  CreatorsCreatorSlugProductsProductSlugRoute: typeof CreatorsCreatorSlugProductsProductSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -424,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoursesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creators/$slug': {
+      id: '/creators/$slug'
+      path: '/creators/$slug'
+      fullPath: '/creators/$slug'
+      preLoaderRoute: typeof CreatorsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/learning/': {
       id: '/learning/'
       path: '/learning'
@@ -443,6 +517,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace/settings'
       fullPath: '/workspace/settings'
       preLoaderRoute: typeof WorkspaceSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/storefront': {
+      id: '/workspace/storefront'
+      path: '/workspace/storefront'
+      fullPath: '/workspace/storefront'
+      preLoaderRoute: typeof WorkspaceStorefrontRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -473,6 +554,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceCoursesCourseIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace/products/': {
+      id: '/workspace/products/'
+      path: '/workspace/products'
+      fullPath: '/workspace/products/'
+      preLoaderRoute: typeof WorkspaceProductsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/products/$productId': {
+      id: '/workspace/products/$productId'
+      path: '/workspace/products/$productId'
+      fullPath: '/workspace/products/$productId'
+      preLoaderRoute: typeof WorkspaceProductsProductIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creators/$creatorSlug/products/$productSlug': {
+      id: '/creators/$creatorSlug/products/$productSlug'
+      path: '/creators/$creatorSlug/products/$productSlug'
+      fullPath: '/creators/$creatorSlug/products/$productSlug'
+      preLoaderRoute: typeof CreatorsCreatorSlugProductsProductSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -491,14 +593,20 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   CheckoutOrderIdRoute: CheckoutOrderIdRoute,
   CoursesSlugRoute: CoursesSlugRoute,
+  CreatorsSlugRoute: CreatorsSlugRoute,
   WorkspaceSalesRoute: WorkspaceSalesRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
+  WorkspaceStorefrontRoute: WorkspaceStorefrontRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   LearningSlugLessonIdRoute: LearningSlugLessonIdRoute,
   WorkspaceCoursesCourseIdRoute: WorkspaceCoursesCourseIdRoute,
+  WorkspaceProductsProductIdRoute: WorkspaceProductsProductIdRoute,
   WorkspaceCoursesIndexRoute: WorkspaceCoursesIndexRoute,
+  WorkspaceProductsIndexRoute: WorkspaceProductsIndexRoute,
+  CreatorsCreatorSlugProductsProductSlugRoute:
+    CreatorsCreatorSlugProductsProductSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
