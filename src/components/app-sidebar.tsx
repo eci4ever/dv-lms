@@ -63,6 +63,9 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "dashboard"
 		| "learning"
 		| "organizations"
+		| "orders"
+		| "purchases"
+		| "sales"
 		| "settings"
 		| "users";
 }
@@ -159,6 +162,18 @@ export function AppSidebar({
 										<SidebarMenuItem>
 											<SidebarMenuButton
 												render={
+													<Link to="/purchases">
+														<CreditCardIcon />
+														<span>Purchases</span>
+													</Link>
+												}
+												isActive={activeItem === "purchases"}
+												tooltip="Purchases"
+											/>
+										</SidebarMenuItem>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
 													<Link to="/learning">
 														<BookOpenIcon />
 														<span>My Courses</span>
@@ -220,6 +235,20 @@ export function AppSidebar({
 													}
 													isActive={activeItem === "courses"}
 													tooltip="Course Setup"
+												/>
+											</SidebarMenuItem>
+										) : null}
+										{isOrganizationOwner ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													render={
+														<Link to="/workspace/sales">
+															<CreditCardIcon />
+															<span>Sales</span>
+														</Link>
+													}
+													isActive={activeItem === "sales"}
+													tooltip="Sales"
 												/>
 											</SidebarMenuItem>
 										) : null}
@@ -307,6 +336,18 @@ export function AppSidebar({
 												}
 												isActive={activeItem === "organizations"}
 												tooltip="Organizations"
+											/>
+										</SidebarMenuItem>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/admin/orders">
+														<CreditCardIcon />
+														<span>Orders</span>
+													</Link>
+												}
+												isActive={activeItem === "orders"}
+												tooltip="Orders"
 											/>
 										</SidebarMenuItem>
 										<MockSidebarItem

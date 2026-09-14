@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, desc, eq, gt, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { auth } from "@/lib/auth";
@@ -313,6 +313,30 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 			)
 			.limit(1);
 		const enrollmentId = existingEnrollment?.id ?? crypto.randomUUID();
+		const [progress] = existingEnrollment
+			? await db
+					.select({
+						total: sql<number>`count(distinct ${schema.lesson.id})`,
+						completed: sql<number>`count(distinct case when ${schema.lessonProgress.completedAt} is not null then ${schema.lessonProgress.lessonId} end)`,
+					})
+					.from(schema.lesson)
+					.innerJoin(
+						schema.courseSection,
+						eq(schema.lesson.sectionId, schema.courseSection.id),
+					)
+					.leftJoin(
+						schema.lessonProgress,
+						and(
+							eq(schema.lessonProgress.enrollmentId, enrollmentId),
+							eq(schema.lessonProgress.lessonId, schema.lesson.id),
+						),
+					)
+					.where(eq(schema.courseSection.courseId, order.courseId))
+			: [{ total: 0, completed: 0 }];
+		const restoresCompletedCourse =
+			Number(progress.total) > 0 &&
+			Number(progress.completed) === Number(progress.total);
+		const enrollmentStatus = restoresCompletedCourse ? "completed" : "active";
 		const paymentReference = `MOCK-${order.id}`;
 		const now = new Date();
 		await db.batch([
@@ -336,11 +360,16 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 					id: enrollmentId,
 					courseId: order.courseId,
 					userId: session.user.id,
-					status: "active",
+					status: enrollmentStatus,
+					completedAt: restoresCompletedCourse ? now : null,
 				})
 				.onConflictDoUpdate({
 					target: [schema.enrollment.courseId, schema.enrollment.userId],
-					set: { status: "active", completedAt: null, updatedAt: now },
+					set: {
+						status: enrollmentStatus,
+						completedAt: restoresCompletedCourse ? now : null,
+						updatedAt: now,
+					},
 				}),
 		]);
 		return { paid: true, courseSlug: order.courseSlug, firstLessonId };

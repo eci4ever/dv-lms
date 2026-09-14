@@ -14,14 +14,18 @@ import { Route as AccountRouteImport } from './routes/account'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PurchasesRouteImport } from './routes/purchases'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
+import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as CheckoutOrderIdRouteImport } from './routes/checkout/$orderId'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
 import { Route as LearningIndexRouteImport } from './routes/learning/index'
+import { Route as WorkspaceSalesRouteImport } from './routes/workspace/sales'
 import { Route as WorkspaceSettingsRouteImport } from './routes/workspace/settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as LearningSlugLessonIdRouteImport } from './routes/learning/$slug/$lessonId'
@@ -53,6 +57,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PurchasesRoute = PurchasesRouteImport.update({
+  id: '/purchases',
+  path: '/purchases',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -68,6 +77,11 @@ const TwoFactorRoute = TwoFactorRouteImport.update({
   path: '/two-factor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminOrdersRoute = AdminOrdersRouteImport.update({
+  id: '/admin/orders',
+  path: '/admin/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
   id: '/admin/organizations',
   path: '/admin/organizations',
@@ -76,6 +90,11 @@ const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckoutOrderIdRoute = CheckoutOrderIdRouteImport.update({
+  id: '/checkout/$orderId',
+  path: '/checkout/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoursesIndexRoute = CoursesIndexRouteImport.update({
@@ -91,6 +110,11 @@ const CoursesSlugRoute = CoursesSlugRouteImport.update({
 const LearningIndexRoute = LearningIndexRouteImport.update({
   id: '/learning/',
   path: '/learning/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceSalesRoute = WorkspaceSalesRouteImport.update({
+  id: '/workspace/sales',
+  path: '/workspace/sales',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
@@ -126,12 +150,16 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/purchases': typeof PurchasesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
+  '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/courses/': typeof CoursesIndexRoute
   '/learning/': typeof LearningIndexRoute
@@ -146,12 +174,16 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/purchases': typeof PurchasesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
+  '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/courses': typeof CoursesIndexRoute
   '/learning': typeof LearningIndexRoute
@@ -167,12 +199,16 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
+  '/purchases': typeof PurchasesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
+  '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/courses/': typeof CoursesIndexRoute
   '/learning/': typeof LearningIndexRoute
@@ -189,12 +225,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/purchases'
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/orders'
     | '/admin/organizations'
     | '/admin/users'
+    | '/checkout/$orderId'
     | '/courses/$slug'
+    | '/workspace/sales'
     | '/workspace/settings'
     | '/courses/'
     | '/learning/'
@@ -209,12 +249,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/purchases'
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/orders'
     | '/admin/organizations'
     | '/admin/users'
+    | '/checkout/$orderId'
     | '/courses/$slug'
+    | '/workspace/sales'
     | '/workspace/settings'
     | '/courses'
     | '/learning'
@@ -229,12 +273,16 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/forgot-password'
     | '/login'
+    | '/purchases'
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/orders'
     | '/admin/organizations'
     | '/admin/users'
+    | '/checkout/$orderId'
     | '/courses/$slug'
+    | '/workspace/sales'
     | '/workspace/settings'
     | '/courses/'
     | '/learning/'
@@ -250,12 +298,16 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
+  PurchasesRoute: typeof PurchasesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TwoFactorRoute: typeof TwoFactorRoute
+  AdminOrdersRoute: typeof AdminOrdersRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminUsersRoute: typeof AdminUsersRoute
+  CheckoutOrderIdRoute: typeof CheckoutOrderIdRoute
   CoursesSlugRoute: typeof CoursesSlugRoute
+  WorkspaceSalesRoute: typeof WorkspaceSalesRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
@@ -302,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/purchases': {
+      id: '/purchases'
+      path: '/purchases'
+      fullPath: '/purchases'
+      preLoaderRoute: typeof PurchasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -323,6 +382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TwoFactorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/orders': {
+      id: '/admin/orders'
+      path: '/admin/orders'
+      fullPath: '/admin/orders'
+      preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/organizations': {
       id: '/admin/organizations'
       path: '/admin/organizations'
@@ -335,6 +401,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/users'
       fullPath: '/admin/users'
       preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checkout/$orderId': {
+      id: '/checkout/$orderId'
+      path: '/checkout/$orderId'
+      fullPath: '/checkout/$orderId'
+      preLoaderRoute: typeof CheckoutOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/courses/': {
@@ -356,6 +429,13 @@ declare module '@tanstack/react-router' {
       path: '/learning'
       fullPath: '/learning/'
       preLoaderRoute: typeof LearningIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/sales': {
+      id: '/workspace/sales'
+      path: '/workspace/sales'
+      fullPath: '/workspace/sales'
+      preLoaderRoute: typeof WorkspaceSalesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/settings': {
@@ -402,12 +482,16 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
+  PurchasesRoute: PurchasesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TwoFactorRoute: TwoFactorRoute,
+  AdminOrdersRoute: AdminOrdersRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminUsersRoute: AdminUsersRoute,
+  CheckoutOrderIdRoute: CheckoutOrderIdRoute,
   CoursesSlugRoute: CoursesSlugRoute,
+  WorkspaceSalesRoute: WorkspaceSalesRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
