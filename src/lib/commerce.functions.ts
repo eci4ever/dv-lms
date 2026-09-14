@@ -291,7 +291,9 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 			)
 			.limit(1);
 		if (!order) throw new Error("Checkout order not found.");
-		const firstLessonId = await getFirstLessonId(order.courseId);
+		if (!order.courseId) throw new Error("This legacy checkout has no course.");
+		const courseId = order.courseId;
+		const firstLessonId = await getFirstLessonId(courseId);
 		if (order.status === "paid") {
 			return { paid: true, courseSlug: order.courseSlug, firstLessonId };
 		}
@@ -307,7 +309,7 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 			.from(schema.enrollment)
 			.where(
 				and(
-					eq(schema.enrollment.courseId, order.courseId),
+					eq(schema.enrollment.courseId, courseId),
 					eq(schema.enrollment.userId, session.user.id),
 				),
 			)
@@ -331,7 +333,7 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 							eq(schema.lessonProgress.lessonId, schema.lesson.id),
 						),
 					)
-					.where(eq(schema.courseSection.courseId, order.courseId))
+					.where(eq(schema.courseSection.courseId, courseId))
 			: [{ total: 0, completed: 0 }];
 		const restoresCompletedCourse =
 			Number(progress.total) > 0 &&
@@ -358,7 +360,7 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 				.insert(schema.enrollment)
 				.values({
 					id: enrollmentId,
-					courseId: order.courseId,
+					courseId,
 					userId: session.user.id,
 					status: enrollmentStatus,
 					completedAt: restoresCompletedCourse ? now : null,
@@ -478,6 +480,7 @@ export const resolveRefund = createServerFn({ method: "POST" })
 			.where(eq(schema.refundRequest.id, data.refundId))
 			.limit(1);
 		if (!request) throw new Error("Refund request not found.");
+		if (!request.courseId) throw new Error("This legacy order has no course.");
 		if (request.status !== "pending") {
 			throw new Error("This refund request has already been resolved.");
 		}

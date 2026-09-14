@@ -132,6 +132,30 @@ export const organization = sqliteTable("organization", {
 	metadata: text("metadata"),
 });
 
+export const creatorProfile = sqliteTable("creator_profile", {
+	id: text("id").primaryKey(),
+	organizationId: text("organization_id")
+		.notNull()
+		.unique()
+		.references(() => organization.id, { onDelete: "cascade" }),
+	displayName: text("display_name").notNull(),
+	headline: text("headline").default("").notNull(),
+	bio: text("bio").default("").notNull(),
+	heroUrl: text("hero_url"),
+	websiteUrl: text("website_url"),
+	youtubeUrl: text("youtube_url"),
+	githubUrl: text("github_url"),
+	twitterUrl: text("twitter_url"),
+	status: text("status").default("draft").notNull(),
+	createdAt: integer("created_at", { mode: "timestamp_ms" })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.notNull(),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+
 export const member = sqliteTable(
 	"member",
 	{
@@ -298,6 +322,131 @@ export const lessonProgress = sqliteTable(
 	],
 );
 
+export const product = sqliteTable(
+	"product",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		type: text("type").notNull(),
+		slug: text("slug").notNull(),
+		name: text("name").notNull(),
+		summary: text("summary").default("").notNull(),
+		description: text("description").default("").notNull(),
+		imageUrl: text("image_url"),
+		status: text("status").default("draft").notNull(),
+		featured: integer("featured", { mode: "boolean" }).default(false).notNull(),
+		position: integer("position").default(0).notNull(),
+		publishedAt: integer("published_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("product_organization_slug_unique").on(
+			table.organizationId,
+			table.slug,
+		),
+		index("product_organizationId_idx").on(table.organizationId),
+		index("product_status_idx").on(table.status),
+	],
+);
+
+export const productCourse = sqliteTable(
+	"product_course",
+	{
+		id: text("id").primaryKey(),
+		productId: text("product_id")
+			.notNull()
+			.references(() => product.id, { onDelete: "cascade" }),
+		courseId: text("course_id")
+			.notNull()
+			.references(() => course.id, { onDelete: "restrict" }),
+		position: integer("position").default(0).notNull(),
+	},
+	(table) => [
+		uniqueIndex("productCourse_product_course_unique").on(
+			table.productId,
+			table.courseId,
+		),
+		index("productCourse_productId_idx").on(table.productId),
+		index("productCourse_courseId_idx").on(table.courseId),
+	],
+);
+
+export const offer = sqliteTable(
+	"offer",
+	{
+		id: text("id").primaryKey(),
+		productId: text("product_id")
+			.notNull()
+			.references(() => product.id, { onDelete: "cascade" }),
+		name: text("name").notNull(),
+		priceInSen: integer("price_in_sen").notNull(),
+		currency: text("currency").default("MYR").notNull(),
+		billingType: text("billing_type").notNull(),
+		billingInterval: text("billing_interval"),
+		status: text("status").default("active").notNull(),
+		position: integer("position").default(0).notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("offer_productId_idx").on(table.productId),
+		index("offer_status_idx").on(table.status),
+	],
+);
+
+export const subscription = sqliteTable(
+	"subscription",
+	{
+		id: text("id").primaryKey(),
+		buyerId: text("buyer_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "restrict" }),
+		offerId: text("offer_id")
+			.notNull()
+			.references(() => offer.id, { onDelete: "restrict" }),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "restrict" }),
+		status: text("status").default("active").notNull(),
+		currentPeriodStart: integer("current_period_start", {
+			mode: "timestamp_ms",
+		}).notNull(),
+		currentPeriodEnd: integer("current_period_end", {
+			mode: "timestamp_ms",
+		}).notNull(),
+		cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" })
+			.default(false)
+			.notNull(),
+		cancelledAt: integer("cancelled_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("subscription_buyerId_idx").on(table.buyerId),
+		index("subscription_offerId_idx").on(table.offerId),
+		index("subscription_organizationId_idx").on(table.organizationId),
+		index("subscription_status_idx").on(table.status),
+	],
+);
+
 export const courseOrder = sqliteTable(
 	"course_order",
 	{
@@ -305,9 +454,18 @@ export const courseOrder = sqliteTable(
 		buyerId: text("buyer_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "restrict" }),
-		courseId: text("course_id")
-			.notNull()
-			.references(() => course.id, { onDelete: "restrict" }),
+		courseId: text("course_id").references(() => course.id, {
+			onDelete: "restrict",
+		}),
+		productId: text("product_id").references(() => product.id, {
+			onDelete: "restrict",
+		}),
+		offerId: text("offer_id").references(() => offer.id, {
+			onDelete: "restrict",
+		}),
+		subscriptionId: text("subscription_id").references(() => subscription.id, {
+			onDelete: "set null",
+		}),
 		organizationId: text("organization_id")
 			.notNull()
 			.references(() => organization.id, { onDelete: "restrict" }),
@@ -317,6 +475,10 @@ export const courseOrder = sqliteTable(
 		sellerNetInSen: integer("seller_net_in_sen").notNull(),
 		status: text("status").default("pending").notNull(),
 		mockPaymentReference: text("mock_payment_reference").unique(),
+		productNameSnapshot: text("product_name_snapshot"),
+		offerNameSnapshot: text("offer_name_snapshot"),
+		billingTypeSnapshot: text("billing_type_snapshot"),
+		billingIntervalSnapshot: text("billing_interval_snapshot"),
 		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
 		paidAt: integer("paid_at", { mode: "timestamp_ms" }),
 		refundedAt: integer("refunded_at", { mode: "timestamp_ms" }),
@@ -331,8 +493,61 @@ export const courseOrder = sqliteTable(
 	(table) => [
 		index("courseOrder_buyerId_idx").on(table.buyerId),
 		index("courseOrder_courseId_idx").on(table.courseId),
+		index("courseOrder_productId_idx").on(table.productId),
+		index("courseOrder_offerId_idx").on(table.offerId),
+		index("courseOrder_subscriptionId_idx").on(table.subscriptionId),
 		index("courseOrder_organizationId_idx").on(table.organizationId),
 		index("courseOrder_status_idx").on(table.status),
+	],
+);
+
+export const orderEntitlement = sqliteTable(
+	"order_entitlement",
+	{
+		id: text("id").primaryKey(),
+		orderId: text("order_id")
+			.notNull()
+			.references(() => courseOrder.id, { onDelete: "cascade" }),
+		courseId: text("course_id")
+			.notNull()
+			.references(() => course.id, { onDelete: "restrict" }),
+		status: text("status").default("active").notNull(),
+		grantedAt: integer("granted_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+	},
+	(table) => [
+		uniqueIndex("orderEntitlement_order_course_unique").on(
+			table.orderId,
+			table.courseId,
+		),
+		index("orderEntitlement_courseId_idx").on(table.courseId),
+	],
+);
+
+export const subscriptionEntitlement = sqliteTable(
+	"subscription_entitlement",
+	{
+		id: text("id").primaryKey(),
+		subscriptionId: text("subscription_id")
+			.notNull()
+			.references(() => subscription.id, { onDelete: "cascade" }),
+		courseId: text("course_id")
+			.notNull()
+			.references(() => course.id, { onDelete: "restrict" }),
+		status: text("status").default("active").notNull(),
+		grantedAt: integer("granted_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+	},
+	(table) => [
+		uniqueIndex("subscriptionEntitlement_subscription_course_unique").on(
+			table.subscriptionId,
+			table.courseId,
+		),
+		index("subscriptionEntitlement_courseId_idx").on(table.courseId),
 	],
 );
 
@@ -372,6 +587,7 @@ export const userRelations = relations(user, ({ many }) => ({
 	coursesCreated: many(course),
 	enrollments: many(enrollment),
 	courseOrders: many(courseOrder),
+	subscriptions: many(subscription),
 	refundRequests: many(refundRequest, { relationName: "refundRequester" }),
 	refundsResolved: many(refundRequest, { relationName: "refundResolver" }),
 }));
@@ -397,11 +613,24 @@ export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
 	}),
 }));
 
-export const organizationRelations = relations(organization, ({ many }) => ({
-	members: many(member),
-	invitations: many(invitation),
-	courses: many(course),
-	courseOrders: many(courseOrder),
+export const organizationRelations = relations(
+	organization,
+	({ many, one }) => ({
+		creatorProfile: one(creatorProfile),
+		members: many(member),
+		invitations: many(invitation),
+		courses: many(course),
+		products: many(product),
+		subscriptions: many(subscription),
+		courseOrders: many(courseOrder),
+	}),
+);
+
+export const creatorProfileRelations = relations(creatorProfile, ({ one }) => ({
+	organization: one(organization, {
+		fields: [creatorProfile.organizationId],
+		references: [organization.id],
+	}),
 }));
 
 export const courseRelations = relations(course, ({ many, one }) => ({
@@ -416,7 +645,60 @@ export const courseRelations = relations(course, ({ many, one }) => ({
 	sections: many(courseSection),
 	enrollments: many(enrollment),
 	orders: many(courseOrder),
+	productCourses: many(productCourse),
+	orderEntitlements: many(orderEntitlement),
+	subscriptionEntitlements: many(subscriptionEntitlement),
 }));
+
+export const productRelations = relations(product, ({ many, one }) => ({
+	organization: one(organization, {
+		fields: [product.organizationId],
+		references: [organization.id],
+	}),
+	courses: many(productCourse),
+	offers: many(offer),
+	orders: many(courseOrder),
+}));
+
+export const productCourseRelations = relations(productCourse, ({ one }) => ({
+	product: one(product, {
+		fields: [productCourse.productId],
+		references: [product.id],
+	}),
+	course: one(course, {
+		fields: [productCourse.courseId],
+		references: [course.id],
+	}),
+}));
+
+export const offerRelations = relations(offer, ({ many, one }) => ({
+	product: one(product, {
+		fields: [offer.productId],
+		references: [product.id],
+	}),
+	orders: many(courseOrder),
+	subscriptions: many(subscription),
+}));
+
+export const subscriptionRelations = relations(
+	subscription,
+	({ many, one }) => ({
+		buyer: one(user, {
+			fields: [subscription.buyerId],
+			references: [user.id],
+		}),
+		offer: one(offer, {
+			fields: [subscription.offerId],
+			references: [offer.id],
+		}),
+		organization: one(organization, {
+			fields: [subscription.organizationId],
+			references: [organization.id],
+		}),
+		orders: many(courseOrder),
+		entitlements: many(subscriptionEntitlement),
+	}),
+);
 
 export const courseSectionRelations = relations(
 	courseSection,
@@ -473,8 +755,49 @@ export const courseOrderRelations = relations(courseOrder, ({ many, one }) => ({
 		fields: [courseOrder.organizationId],
 		references: [organization.id],
 	}),
+	product: one(product, {
+		fields: [courseOrder.productId],
+		references: [product.id],
+	}),
+	offer: one(offer, {
+		fields: [courseOrder.offerId],
+		references: [offer.id],
+	}),
+	subscription: one(subscription, {
+		fields: [courseOrder.subscriptionId],
+		references: [subscription.id],
+	}),
+	entitlements: many(orderEntitlement),
 	refundRequests: many(refundRequest),
 }));
+
+export const orderEntitlementRelations = relations(
+	orderEntitlement,
+	({ one }) => ({
+		order: one(courseOrder, {
+			fields: [orderEntitlement.orderId],
+			references: [courseOrder.id],
+		}),
+		course: one(course, {
+			fields: [orderEntitlement.courseId],
+			references: [course.id],
+		}),
+	}),
+);
+
+export const subscriptionEntitlementRelations = relations(
+	subscriptionEntitlement,
+	({ one }) => ({
+		subscription: one(subscription, {
+			fields: [subscriptionEntitlement.subscriptionId],
+			references: [subscription.id],
+		}),
+		course: one(course, {
+			fields: [subscriptionEntitlement.courseId],
+			references: [course.id],
+		}),
+	}),
+);
 
 export const refundRequestRelations = relations(refundRequest, ({ one }) => ({
 	order: one(courseOrder, {
