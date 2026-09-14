@@ -138,7 +138,9 @@ function PublicCourseDetail() {
 						<CardContent className="space-y-4 p-5">
 							<div className="flex items-baseline gap-2">
 								<span className="text-2xl font-semibold">
-									{formatCoursePrice(course.priceInSen)}
+									{formatCoursePrice(
+										course.defaultOfferPriceInSen ?? course.priceInSen,
+									)}
 								</span>
 								{course.originalPriceInSen ? (
 									<span className="text-sm text-muted-foreground line-through">
@@ -149,6 +151,7 @@ function PublicCourseDetail() {
 							<EnrollmentAction
 								slug={course.slug}
 								priceInSen={course.priceInSen}
+								offerId={course.defaultOfferId}
 								state={enrollmentState}
 							/>
 						</CardContent>
@@ -239,10 +242,12 @@ function PublicCourseDetail() {
 function EnrollmentAction({
 	slug,
 	priceInSen,
+	offerId,
 	state,
 }: {
 	slug: string;
 	priceInSen: number;
+	offerId: string | null;
 	state: Awaited<ReturnType<typeof getEnrollmentState>>;
 }) {
 	const navigate = useNavigate();
@@ -291,7 +296,9 @@ function EnrollmentAction({
 	async function startCheckout() {
 		setBusy(true);
 		try {
-			const result = await createCheckout({ data: { slug } });
+			if (!offerId)
+				throw new Error("No active offer is available for this course.");
+			const result = await createCheckout({ data: { offerId } });
 			await navigate({
 				to: "/checkout/$orderId",
 				params: { orderId: result.orderId },

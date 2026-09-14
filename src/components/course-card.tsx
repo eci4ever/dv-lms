@@ -33,6 +33,8 @@ export interface CourseCardData {
 	originalPriceInSen: number | null;
 	organizationName: string;
 	organizationSlug: string;
+	defaultOfferId: string | null;
+	defaultOfferPriceInSen: number | null;
 	creatorName: string;
 	lessonCount: number;
 	durationMinutes: number;

@@ -1,9 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeftIcon, CheckIcon } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeftIcon, CheckIcon, LoaderCircleIcon } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { createCheckout } from "@/lib/commerce.functions";
 import { formatCoursePrice } from "@/lib/course-types";
 import { getPublicProduct } from "@/lib/creator-commerce.functions";
 import { billingLabel, productTypeLabel } from "@/lib/creator-commerce-types";
@@ -23,6 +26,28 @@ export const Route = createFileRoute(
 });
 function PublicProduct() {
 	const product = Route.useLoaderData();
+	const navigate = useNavigate();
+	const [busy, setBusy] = useState<string | null>(null);
+	async function checkout(offerId: string) {
+		setBusy(offerId);
+		try {
+			const result = await createCheckout({ data: { offerId } });
+			await navigate({
+				to: "/checkout/$orderId",
+				params: { orderId: result.orderId },
+			});
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : "Unable to start checkout.";
+			if (message === "Authentication required.") {
+				await navigate({ to: "/login" });
+				return;
+			}
+			toast.error(message);
+		} finally {
+			setBusy(null);
+		}
+	}
 	return (
 		<main className="min-h-svh bg-muted/20">
 			<header className="border-b bg-background">
@@ -100,8 +125,17 @@ function PublicProduct() {
 											</span>
 										) : null}
 									</p>
-									<Button className="mt-4 w-full" disabled>
-										Checkout available in next milestone
+									<Button
+										className="mt-4 w-full"
+										disabled={Boolean(busy)}
+										onClick={() => checkout(offer.id)}
+									>
+										{busy === offer.id ? (
+											<LoaderCircleIcon className="animate-spin" />
+										) : null}
+										{offer.billingType === "recurring"
+											? "Join membership"
+											: "Buy now"}
 									</Button>
 								</div>
 							))}

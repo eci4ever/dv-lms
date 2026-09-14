@@ -1,9 +1,14 @@
 import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
+import {
+	activateEnrollment,
+	hasPermanentAccess,
+	reconcileCourseAccess,
+} from "@/lib/access.server";
 import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
 
@@ -12,58 +17,43 @@ const checkoutLifetimeMs = 30 * 60 * 1_000;
 const refundWindowMs = 14 * 24 * 60 * 60 * 1_000;
 const platformFeePercent = 10;
 
-function asRecord(value: unknown) {
-	if (!value || typeof value !== "object" || Array.isArray(value)) {
+function record(value: unknown) {
+	if (!value || typeof value !== "object" || Array.isArray(value))
 		throw new Error("Invalid request.");
-	}
 	return value as Record<string, unknown>;
 }
-
-function requiredString(value: unknown, label: string, maximumLength = 120) {
-	const text = typeof value === "string" ? value.trim() : "";
-	if (!text) throw new Error(`${label} is required.`);
-	if (text.length > maximumLength) {
-		throw new Error(`${label} must be ${maximumLength} characters or fewer.`);
-	}
-	return text;
+function required(value: unknown, label: string, max = 120) {
+	const result = typeof value === "string" ? value.trim() : "";
+	if (!result) throw new Error(`${label} is required.`);
+	if (result.length > max) throw new Error(`${label} is too long.`);
+	return result;
 }
-
-function optionalString(value: unknown, maximumLength = 500) {
-	const text = typeof value === "string" ? value.trim() : "";
-	if (text.length > maximumLength) {
-		throw new Error(`Text must be ${maximumLength} characters or fewer.`);
-	}
-	return text;
+function optional(value: unknown, max = 1000) {
+	const result = typeof value === "string" ? value.trim() : "";
+	if (result.length > max) throw new Error("Text is too long.");
+	return result;
 }
-
 function validateId(input: unknown) {
-	const values = asRecord(input);
-	return { id: requiredString(values.id, "Order") };
+	return { id: required(record(input).id, "Order") };
 }
-
-function validateSlug(input: unknown) {
-	const values = asRecord(input);
-	return { slug: requiredString(values.slug, "Course URL") };
+function validateOffer(input: unknown) {
+	return { offerId: required(record(input).offerId, "Offer") };
 }
-
-function validateRefundRequest(input: unknown) {
-	const values = asRecord(input);
+function validateRefund(input: unknown) {
+	const values = record(input);
 	return {
-		orderId: requiredString(values.orderId, "Order"),
-		reason: requiredString(values.reason, "Refund reason", 1_000),
+		orderId: required(values.orderId, "Order"),
+		reason: required(values.reason, "Refund reason", 1000),
 	};
 }
-
-function validateRefundResolution(input: unknown) {
-	const values = asRecord(input);
-	const decision = values.decision;
-	if (decision !== "approved" && decision !== "rejected") {
+function validateResolution(input: unknown) {
+	const values = record(input);
+	if (values.decision !== "approved" && values.decision !== "rejected")
 		throw new Error("Select a valid refund decision.");
-	}
 	return {
-		refundId: requiredString(values.refundId, "Refund request"),
-		decision,
-		note: optionalString(values.note, 1_000),
+		refundId: required(values.refundId, "Refund request"),
+		decision: values.decision,
+		note: optional(values.note),
 	};
 }
 
@@ -73,7 +63,6 @@ async function requireSession() {
 	if (!session) throw new Error("Authentication required.");
 	return { headers, session };
 }
-
 async function requireOwner() {
 	const context = await requireSession();
 	const organizations = await auth.api.listOrganizations({
@@ -82,8 +71,7 @@ async function requireOwner() {
 	const activeOrganizationId =
 		context.session.session.activeOrganizationId &&
 		organizations.some(
-			(organization) =>
-				organization.id === context.session.session.activeOrganizationId,
+			(item) => item.id === context.session.session.activeOrganizationId,
 		)
 			? context.session.session.activeOrganizationId
 			: organizations[0]?.id;
@@ -93,25 +81,21 @@ async function requireOwner() {
 		query: { organizationId: activeOrganizationId },
 	});
 	const role = organization?.members.find(
-		(member) => member.userId === context.session.user.id,
+		(item) => item.userId === context.session.user.id,
 	)?.role;
-	if (!role?.split(",").includes("owner")) {
+	if (!role?.split(",").includes("owner"))
 		throw new Error("Organization owner access is required.");
-	}
 	return { ...context, activeOrganizationId };
 }
-
 async function requirePlatformAdmin() {
 	const context = await requireSession();
 	if (
 		!context.session.user.role?.split(",").includes("admin") ||
 		context.session.session.impersonatedBy
-	) {
+	)
 		throw new Error("Platform administrator access is required.");
-	}
 	return context;
 }
-
 async function expirePendingOrders(buyerId?: string) {
 	const filters = [
 		eq(schema.courseOrder.status, "pending"),
@@ -124,7 +108,29 @@ async function expirePendingOrders(buyerId?: string) {
 		.where(and(...filters));
 }
 
-async function getFirstLessonId(courseId: string) {
+async function offerCourses(offerId: string) {
+	return db
+		.select({
+			id: schema.course.id,
+			slug: schema.course.slug,
+			title: schema.course.title,
+			status: schema.course.status,
+		})
+		.from(schema.offer)
+		.innerJoin(schema.product, eq(schema.offer.productId, schema.product.id))
+		.innerJoin(
+			schema.productCourse,
+			eq(schema.product.id, schema.productCourse.productId),
+		)
+		.innerJoin(
+			schema.course,
+			eq(schema.productCourse.courseId, schema.course.id),
+		)
+		.where(eq(schema.offer.id, offerId))
+		.orderBy(asc(schema.productCourse.position));
+}
+
+async function firstLessonId(courseId: string) {
 	const [lesson] = await db
 		.select({ id: schema.lesson.id })
 		.from(schema.lesson)
@@ -133,7 +139,7 @@ async function getFirstLessonId(courseId: string) {
 			eq(schema.lesson.sectionId, schema.courseSection.id),
 		)
 		.where(eq(schema.courseSection.courseId, courseId))
-		.orderBy(schema.courseSection.position, schema.lesson.position)
+		.orderBy(asc(schema.courseSection.position), asc(schema.lesson.position))
 		.limit(1);
 	return lesson?.id ?? null;
 }
@@ -150,12 +156,23 @@ const orderSelection = {
 	paidAt: schema.courseOrder.paidAt,
 	refundedAt: schema.courseOrder.refundedAt,
 	createdAt: schema.courseOrder.createdAt,
-	courseId: schema.course.id,
+	courseId: schema.courseOrder.courseId,
 	courseSlug: schema.course.slug,
-	courseTitle: schema.course.title,
-	thumbnailUrl: schema.course.thumbnailUrl,
+	courseTitle: sql<string>`coalesce(${schema.courseOrder.productNameSnapshot}, ${schema.course.title})`,
+	thumbnailUrl: sql<
+		string | null
+	>`coalesce(${schema.product.imageUrl}, ${schema.course.thumbnailUrl})`,
+	productId: schema.courseOrder.productId,
+	productSlug: schema.product.slug,
+	productName: schema.courseOrder.productNameSnapshot,
+	offerId: schema.courseOrder.offerId,
+	offerName: schema.courseOrder.offerNameSnapshot,
+	billingType: schema.courseOrder.billingTypeSnapshot,
+	billingInterval: schema.courseOrder.billingIntervalSnapshot,
+	subscriptionId: schema.courseOrder.subscriptionId,
 	organizationId: schema.organization.id,
 	organizationName: schema.organization.name,
+	organizationSlug: schema.organization.slug,
 	buyerId: schema.user.id,
 	buyerName: schema.user.name,
 	buyerEmail: schema.user.email,
@@ -165,12 +182,15 @@ const orderSelection = {
 	refundRequestedAt: schema.refundRequest.requestedAt,
 	refundResolutionNote: schema.refundRequest.resolutionNote,
 };
-
 function orderQuery() {
 	return db
 		.select(orderSelection)
 		.from(schema.courseOrder)
-		.innerJoin(schema.course, eq(schema.courseOrder.courseId, schema.course.id))
+		.leftJoin(schema.course, eq(schema.courseOrder.courseId, schema.course.id))
+		.leftJoin(
+			schema.product,
+			eq(schema.courseOrder.productId, schema.product.id),
+		)
 		.innerJoin(
 			schema.organization,
 			eq(schema.courseOrder.organizationId, schema.organization.id),
@@ -183,45 +203,54 @@ function orderQuery() {
 }
 
 export const createCheckout = createServerFn({ method: "POST" })
-	.validator(validateSlug)
+	.validator(validateOffer)
 	.handler(async ({ data }) => {
 		const { session } = await requireSession();
 		await expirePendingOrders(session.user.id);
-		const [course] = await db
+		const [offer] = await db
 			.select({
-				id: schema.course.id,
-				organizationId: schema.course.organizationId,
-				priceInSen: schema.course.priceInSen,
+				id: schema.offer.id,
+				productId: schema.product.id,
+				productName: schema.product.name,
+				productStatus: schema.product.status,
+				organizationId: schema.product.organizationId,
+				offerName: schema.offer.name,
+				priceInSen: schema.offer.priceInSen,
+				currency: schema.offer.currency,
+				billingType: schema.offer.billingType,
+				billingInterval: schema.offer.billingInterval,
+				offerStatus: schema.offer.status,
 			})
-			.from(schema.course)
-			.where(
-				and(
-					eq(schema.course.slug, data.slug),
-					eq(schema.course.status, "published"),
-				),
-			)
+			.from(schema.offer)
+			.innerJoin(schema.product, eq(schema.offer.productId, schema.product.id))
+			.where(eq(schema.offer.id, data.offerId))
 			.limit(1);
-		if (!course) throw new Error("Published course not found.");
-		if (course.priceInSen <= 0) throw new Error("This course is free.");
-		const [activeEnrollment] = await db
-			.select({ id: schema.enrollment.id })
-			.from(schema.enrollment)
-			.where(
-				and(
-					eq(schema.enrollment.courseId, course.id),
-					eq(schema.enrollment.userId, session.user.id),
-					inArray(schema.enrollment.status, ["active", "completed"]),
-				),
-			)
-			.limit(1);
-		if (activeEnrollment) throw new Error("You are already enrolled.");
+		if (
+			!offer ||
+			offer.offerStatus !== "active" ||
+			offer.productStatus !== "published"
+		)
+			throw new Error("This offer is unavailable.");
+		const courses = await offerCourses(offer.id);
+		if (
+			!courses.length ||
+			courses.some((course) => course.status !== "published")
+		)
+			throw new Error("A course in this product is unavailable.");
+		if (offer.billingType === "one_time") {
+			const owned = await Promise.all(
+				courses.map((course) => hasPermanentAccess(session.user.id, course.id)),
+			);
+			if (owned.every(Boolean))
+				throw new Error("You already own every course in this product.");
+		}
 		const [pending] = await db
 			.select({ id: schema.courseOrder.id })
 			.from(schema.courseOrder)
 			.where(
 				and(
 					eq(schema.courseOrder.buyerId, session.user.id),
-					eq(schema.courseOrder.courseId, course.id),
+					eq(schema.courseOrder.offerId, offer.id),
 					eq(schema.courseOrder.status, "pending"),
 					gt(schema.courseOrder.expiresAt, new Date()),
 				),
@@ -229,19 +258,23 @@ export const createCheckout = createServerFn({ method: "POST" })
 			.orderBy(desc(schema.courseOrder.createdAt))
 			.limit(1);
 		if (pending) return { orderId: pending.id, reused: true };
-
 		const id = crypto.randomUUID();
-		const platformFeeInSen = Math.round(
-			(course.priceInSen * platformFeePercent) / 100,
-		);
+		const fee = Math.round((offer.priceInSen * platformFeePercent) / 100);
 		await db.insert(schema.courseOrder).values({
 			id,
 			buyerId: session.user.id,
-			courseId: course.id,
-			organizationId: course.organizationId,
-			grossInSen: course.priceInSen,
-			platformFeeInSen,
-			sellerNetInSen: course.priceInSen - platformFeeInSen,
+			courseId: courses[0]?.id ?? null,
+			productId: offer.productId,
+			offerId: offer.id,
+			organizationId: offer.organizationId,
+			currency: offer.currency,
+			grossInSen: offer.priceInSen,
+			platformFeeInSen: fee,
+			sellerNetInSen: offer.priceInSen - fee,
+			productNameSnapshot: offer.productName,
+			offerNameSnapshot: offer.offerName,
+			billingTypeSnapshot: offer.billingType,
+			billingIntervalSnapshot: offer.billingInterval,
 			expiresAt: new Date(Date.now() + checkoutLifetimeMs),
 		});
 		return { orderId: id, reused: false };
@@ -261,7 +294,17 @@ export const getCheckoutOrder = createServerFn({ method: "GET" })
 			)
 			.limit(1);
 		if (!order) throw new Error("Checkout order not found.");
-		return order;
+		const courses = order.offerId ? await offerCourses(order.offerId) : [];
+		const ownership = await Promise.all(
+			courses.map((course) => hasPermanentAccess(session.user.id, course.id)),
+		);
+		return {
+			...order,
+			courses: courses.map((course, index) => ({
+				...course,
+				alreadyOwned: ownership[index],
+			})),
+		};
 	});
 
 export const confirmMockPayment = createServerFn({ method: "POST" })
@@ -270,19 +313,8 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 		const { session } = await requireSession();
 		await expirePendingOrders(session.user.id);
 		const [order] = await db
-			.select({
-				id: schema.courseOrder.id,
-				status: schema.courseOrder.status,
-				expiresAt: schema.courseOrder.expiresAt,
-				courseId: schema.courseOrder.courseId,
-				courseSlug: schema.course.slug,
-				courseStatus: schema.course.status,
-			})
+			.select()
 			.from(schema.courseOrder)
-			.innerJoin(
-				schema.course,
-				eq(schema.courseOrder.courseId, schema.course.id),
-			)
 			.where(
 				and(
 					eq(schema.courseOrder.id, data.id),
@@ -291,62 +323,34 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 			)
 			.limit(1);
 		if (!order) throw new Error("Checkout order not found.");
-		if (!order.courseId) throw new Error("This legacy checkout has no course.");
-		const courseId = order.courseId;
-		const firstLessonId = await getFirstLessonId(courseId);
 		if (order.status === "paid") {
-			return { paid: true, courseSlug: order.courseSlug, firstLessonId };
+			const courses = order.offerId ? await offerCourses(order.offerId) : [];
+			return {
+				paid: true,
+				courseSlug: courses[0]?.slug ?? "",
+				firstLessonId: courses[0] ? await firstLessonId(courses[0].id) : null,
+				subscriptionId: order.subscriptionId,
+			};
 		}
-		if (order.status !== "pending" || order.expiresAt <= new Date()) {
+		if (order.status !== "pending" || order.expiresAt <= new Date())
 			throw new Error("This checkout has expired.");
-		}
-		if (order.courseStatus !== "published") {
-			throw new Error("This course is no longer available for purchase.");
-		}
-
-		const [existingEnrollment] = await db
-			.select({ id: schema.enrollment.id })
-			.from(schema.enrollment)
-			.where(
-				and(
-					eq(schema.enrollment.courseId, courseId),
-					eq(schema.enrollment.userId, session.user.id),
-				),
-			)
-			.limit(1);
-		const enrollmentId = existingEnrollment?.id ?? crypto.randomUUID();
-		const [progress] = existingEnrollment
-			? await db
-					.select({
-						total: sql<number>`count(distinct ${schema.lesson.id})`,
-						completed: sql<number>`count(distinct case when ${schema.lessonProgress.completedAt} is not null then ${schema.lessonProgress.lessonId} end)`,
-					})
-					.from(schema.lesson)
-					.innerJoin(
-						schema.courseSection,
-						eq(schema.lesson.sectionId, schema.courseSection.id),
-					)
-					.leftJoin(
-						schema.lessonProgress,
-						and(
-							eq(schema.lessonProgress.enrollmentId, enrollmentId),
-							eq(schema.lessonProgress.lessonId, schema.lesson.id),
-						),
-					)
-					.where(eq(schema.courseSection.courseId, courseId))
-			: [{ total: 0, completed: 0 }];
-		const restoresCompletedCourse =
-			Number(progress.total) > 0 &&
-			Number(progress.completed) === Number(progress.total);
-		const enrollmentStatus = restoresCompletedCourse ? "completed" : "active";
-		const paymentReference = `MOCK-${order.id}`;
+		if (!order.offerId || order.billingTypeSnapshot !== "one_time")
+			throw new Error(
+				"Membership activation is available in the next milestone.",
+			);
+		const courses = await offerCourses(order.offerId);
+		if (
+			!courses.length ||
+			courses.some((course) => course.status !== "published")
+		)
+			throw new Error("A course in this product is unavailable.");
 		const now = new Date();
 		await db.batch([
 			db
 				.update(schema.courseOrder)
 				.set({
 					status: "paid",
-					mockPaymentReference: paymentReference,
+					mockPaymentReference: `MOCK-${order.id}`,
 					paidAt: now,
 					updatedAt: now,
 				})
@@ -356,25 +360,31 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 						eq(schema.courseOrder.status, "pending"),
 					),
 				),
-			db
-				.insert(schema.enrollment)
-				.values({
-					id: enrollmentId,
-					courseId,
-					userId: session.user.id,
-					status: enrollmentStatus,
-					completedAt: restoresCompletedCourse ? now : null,
-				})
-				.onConflictDoUpdate({
-					target: [schema.enrollment.courseId, schema.enrollment.userId],
-					set: {
-						status: enrollmentStatus,
-						completedAt: restoresCompletedCourse ? now : null,
-						updatedAt: now,
-					},
-				}),
+			...courses.map((course) =>
+				db
+					.insert(schema.orderEntitlement)
+					.values({
+						id: crypto.randomUUID(),
+						orderId: order.id,
+						courseId: course.id,
+					})
+					.onConflictDoUpdate({
+						target: [
+							schema.orderEntitlement.orderId,
+							schema.orderEntitlement.courseId,
+						],
+						set: { status: "active", revokedAt: null },
+					}),
+			),
 		]);
-		return { paid: true, courseSlug: order.courseSlug, firstLessonId };
+		for (const course of courses)
+			await activateEnrollment(session.user.id, course.id, now);
+		return {
+			paid: true,
+			courseSlug: courses[0].slug,
+			firstLessonId: await firstLessonId(courses[0].id),
+			subscriptionId: null,
+		};
 	});
 
 export const listPurchases = createServerFn({ method: "GET" }).handler(
@@ -386,9 +396,8 @@ export const listPurchases = createServerFn({ method: "GET" }).handler(
 			.orderBy(desc(schema.courseOrder.createdAt));
 	},
 );
-
 export const requestRefund = createServerFn({ method: "POST" })
-	.validator(validateRefundRequest)
+	.validator(validateRefund)
 	.handler(async ({ data }) => {
 		const { session } = await requireSession();
 		const [order] = await db
@@ -405,13 +414,10 @@ export const requestRefund = createServerFn({ method: "POST" })
 				),
 			)
 			.limit(1);
-		if (!order) throw new Error("Purchase not found.");
-		if (order.status !== "paid" || !order.paidAt) {
-			throw new Error("Only paid purchases can be refunded.");
-		}
-		if (Date.now() - order.paidAt.getTime() > refundWindowMs) {
+		if (!order || order.status !== "paid" || !order.paidAt)
+			throw new Error("Only your paid purchases can be refunded.");
+		if (Date.now() - order.paidAt.getTime() > refundWindowMs)
 			throw new Error("The 14-day refund window has ended.");
-		}
 		const [existing] = await db
 			.select({ id: schema.refundRequest.id })
 			.from(schema.refundRequest)
@@ -428,7 +434,6 @@ export const requestRefund = createServerFn({ method: "POST" })
 		});
 		return { id, status: "pending" as const };
 	});
-
 export const listOrganizationSales = createServerFn({ method: "GET" }).handler(
 	async () => {
 		const { activeOrganizationId } = await requireOwner();
@@ -437,20 +442,19 @@ export const listOrganizationSales = createServerFn({ method: "GET" }).handler(
 			.where(eq(schema.courseOrder.organizationId, activeOrganizationId))
 			.orderBy(desc(schema.courseOrder.createdAt));
 		const totals = orders.reduce(
-			(accumulator, order) => {
+			(sum, order) => {
 				if (order.status === "paid") {
-					accumulator.grossInSen += order.grossInSen;
-					accumulator.platformFeeInSen += order.platformFeeInSen;
-					accumulator.sellerNetInSen += order.sellerNetInSen;
+					sum.grossInSen += order.grossInSen;
+					sum.platformFeeInSen += order.platformFeeInSen;
+					sum.sellerNetInSen += order.sellerNetInSen;
 				}
-				return accumulator;
+				return sum;
 			},
 			{ grossInSen: 0, platformFeeInSen: 0, sellerNetInSen: 0 },
 		);
 		return { orders, totals };
 	},
 );
-
 export const listAdminOrders = createServerFn({ method: "GET" }).handler(
 	async () => {
 		await requirePlatformAdmin();
@@ -458,9 +462,8 @@ export const listAdminOrders = createServerFn({ method: "GET" }).handler(
 		return orderQuery().orderBy(desc(schema.courseOrder.createdAt));
 	},
 );
-
 export const resolveRefund = createServerFn({ method: "POST" })
-	.validator(validateRefundResolution)
+	.validator(validateResolution)
 	.handler(async ({ data }) => {
 		const { session } = await requirePlatformAdmin();
 		const [request] = await db
@@ -469,7 +472,6 @@ export const resolveRefund = createServerFn({ method: "POST" })
 				status: schema.refundRequest.status,
 				orderId: schema.courseOrder.id,
 				orderStatus: schema.courseOrder.status,
-				courseId: schema.courseOrder.courseId,
 				buyerId: schema.courseOrder.buyerId,
 			})
 			.from(schema.refundRequest)
@@ -479,16 +481,14 @@ export const resolveRefund = createServerFn({ method: "POST" })
 			)
 			.where(eq(schema.refundRequest.id, data.refundId))
 			.limit(1);
-		if (!request) throw new Error("Refund request not found.");
-		if (!request.courseId) throw new Error("This legacy order has no course.");
-		if (request.status !== "pending") {
-			throw new Error("This refund request has already been resolved.");
-		}
-		if (request.orderStatus !== "paid") {
-			throw new Error("Only paid orders can be resolved.");
-		}
+		if (
+			!request ||
+			request.status !== "pending" ||
+			request.orderStatus !== "paid"
+		)
+			throw new Error("This refund cannot be resolved.");
 		const now = new Date();
-		const resolveStatement = db
+		const resolution = db
 			.update(schema.refundRequest)
 			.set({
 				status: data.decision,
@@ -502,25 +502,29 @@ export const resolveRefund = createServerFn({ method: "POST" })
 					eq(schema.refundRequest.status, "pending"),
 				),
 			);
-		if (data.decision === "approved") {
-			await db.batch([
-				resolveStatement,
-				db
-					.update(schema.courseOrder)
-					.set({ status: "refunded", refundedAt: now, updatedAt: now })
-					.where(eq(schema.courseOrder.id, request.orderId)),
-				db
-					.update(schema.enrollment)
-					.set({ status: "cancelled", completedAt: null, updatedAt: now })
-					.where(
-						and(
-							eq(schema.enrollment.courseId, request.courseId),
-							eq(schema.enrollment.userId, request.buyerId),
-						),
-					),
-			]);
-		} else {
-			await resolveStatement;
+		if (data.decision === "rejected") {
+			await resolution;
+			return { status: data.decision };
 		}
+		const entitlements = await db
+			.select({ courseId: schema.orderEntitlement.courseId })
+			.from(schema.orderEntitlement)
+			.where(eq(schema.orderEntitlement.orderId, request.orderId));
+		await db.batch([
+			resolution,
+			db
+				.update(schema.courseOrder)
+				.set({ status: "refunded", refundedAt: now, updatedAt: now })
+				.where(eq(schema.courseOrder.id, request.orderId)),
+			db
+				.update(schema.orderEntitlement)
+				.set({ status: "revoked", revokedAt: now })
+				.where(eq(schema.orderEntitlement.orderId, request.orderId)),
+		]);
+		await reconcileCourseAccess(
+			request.buyerId,
+			entitlements.map((item) => item.courseId),
+			now,
+		);
 		return { status: data.decision };
 	});

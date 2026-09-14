@@ -68,12 +68,25 @@ function CheckoutPage() {
 			<div className="mx-auto max-w-3xl">
 				<Button
 					render={
-						<Link to="/courses/$slug" params={{ slug: order.courseSlug }} />
+						order.productSlug ? (
+							<Link
+								to="/creators/$creatorSlug/products/$productSlug"
+								params={{
+									creatorSlug: order.organizationSlug,
+									productSlug: order.productSlug,
+								}}
+							/>
+						) : (
+							<Link
+								to="/courses/$slug"
+								params={{ slug: order.courseSlug ?? "" }}
+							/>
+						)
 					}
 					variant="ghost"
 					className="mb-4"
 				>
-					<ArrowLeftIcon /> Back to course
+					<ArrowLeftIcon /> Back to product
 				</Button>
 				<div className="grid gap-6 md:grid-cols-[1fr_280px]">
 					<Card>
@@ -99,15 +112,41 @@ function CheckoutPage() {
 									) : null}
 								</div>
 								<div>
-									<p className="font-medium">{order.courseTitle}</p>
+									<p className="font-medium">
+										{order.productName ?? order.courseTitle}
+									</p>
 									<p className="mt-1 text-sm text-muted-foreground">
 										{order.organizationName}
 									</p>
 								</div>
 							</div>
 							<Separator />
+							{order.courses.length > 1 ? (
+								<div className="space-y-2">
+									<p className="text-sm font-medium">Included courses</p>
+									{order.courses.map((course) => (
+										<div
+											key={course.id}
+											className="flex justify-between gap-3 text-sm"
+										>
+											<span>{course.title}</span>
+											{course.alreadyOwned ? (
+												<span className="text-muted-foreground">
+													Already owned
+												</span>
+											) : null}
+										</div>
+									))}
+									{order.courses.some((course) => course.alreadyOwned) ? (
+										<p className="text-xs text-muted-foreground">
+											Bundle pricing is fixed and does not deduct courses
+											already owned.
+										</p>
+									) : null}
+								</div>
+							) : null}
 							<div className="flex items-center justify-between text-sm">
-								<span className="text-muted-foreground">Course price</span>
+								<span className="text-muted-foreground">Offer price</span>
 								<span className="font-semibold">
 									{formatCoursePrice(order.grossInSen)}
 								</span>

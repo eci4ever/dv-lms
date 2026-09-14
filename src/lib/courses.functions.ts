@@ -275,6 +275,22 @@ const courseCardSelection = {
 	updatedAt: schema.course.updatedAt,
 	organizationName: schema.organization.name,
 	organizationSlug: schema.organization.slug,
+	defaultOfferId: sql<string | null>`(
+		select o.id from offer o
+		inner join product p on o.product_id = p.id
+		inner join product_course pc on p.id = pc.product_id
+		where pc.course_id = ${schema.course.id}
+			and p.type = 'course' and p.status = 'published' and o.status = 'active'
+		order by o.position asc limit 1
+	)`,
+	defaultOfferPriceInSen: sql<number | null>`(
+		select o.price_in_sen from offer o
+		inner join product p on o.product_id = p.id
+		inner join product_course pc on p.id = pc.product_id
+		where pc.course_id = ${schema.course.id}
+			and p.type = 'course' and p.status = 'published' and o.status = 'active'
+		order by o.position asc limit 1
+	)`,
 	creatorName: schema.user.name,
 	lessonCount: sql<number>`count(distinct ${schema.lesson.id})`,
 	durationMinutes: sql<number>`coalesce(sum(${schema.lesson.durationMinutes}), 0)`,
