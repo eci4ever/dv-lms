@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { createCheckout } from "@/lib/commerce.functions";
 import {
 	categoryLabel,
 	formatCoursePrice,
@@ -283,14 +284,37 @@ function EnrollmentAction({
 		);
 	}
 
+	async function startCheckout() {
+		setBusy(true);
+		try {
+			const result = await createCheckout({ data: { slug } });
+			await navigate({
+				to: "/checkout/$orderId",
+				params: { orderId: result.orderId },
+			});
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Unable to start checkout.",
+			);
+		} finally {
+			setBusy(false);
+		}
+	}
+
 	if (priceInSen > 0) {
 		return (
 			<>
-				<Button size="lg" className="w-full" disabled>
-					Checkout coming soon
+				<Button
+					size="lg"
+					className="w-full"
+					disabled={busy}
+					onClick={startCheckout}
+				>
+					{busy ? <LoaderCircleIcon className="animate-spin" /> : null}
+					Buy now
 				</Button>
 				<p className="text-center text-xs text-muted-foreground">
-					Paid checkout will be enabled after a payment provider is connected.
+					Mock checkout for testing. No money will be charged.
 				</p>
 			</>
 		);
