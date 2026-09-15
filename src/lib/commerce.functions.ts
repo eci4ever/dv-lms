@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
+import { alias } from "drizzle-orm/sqlite-core";
 
 import {
 	activateEnrollment,
@@ -14,6 +15,7 @@ import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
 
 const db = drizzle(env.DB, { schema });
+const customer = alias(schema.user, "customer");
 const checkoutLifetimeMs = 30 * 60 * 1_000;
 const refundWindowMs = 14 * 24 * 60 * 60 * 1_000;
 const platformFeePercent = 10;
@@ -715,22 +717,24 @@ export const listOrganizationCustomers = createServerFn({
 }).handler(async () => {
 	const { activeOrganizationId } = await requireOwner();
 	await expireMemberships();
+	const now = Date.now();
+	const customerId = sql.raw('"customer"."id"');
 	return db
 		.select({
-			id: schema.user.id,
-			name: schema.user.name,
-			email: schema.user.email,
-			image: schema.user.image,
-			totalSpentInSen: sql<number>`coalesce((select sum(co.gross_in_sen) from course_order co where co.buyer_id = ${schema.user.id} and co.organization_id = ${activeOrganizationId} and co.status = 'paid'), 0)`,
-			productsPurchased: sql<number>`(select count(distinct co.product_id) from course_order co where co.buyer_id = ${schema.user.id} and co.organization_id = ${activeOrganizationId} and co.status = 'paid')`,
-			courseAccess: sql<number>`(select count(distinct course_id) from (select oe.course_id from order_entitlement oe inner join course_order co on co.id = oe.order_id where co.buyer_id = ${schema.user.id} and co.organization_id = ${activeOrganizationId} and co.status = 'paid' and oe.status = 'active' union select se.course_id from subscription_entitlement se inner join subscription s on s.id = se.subscription_id where s.buyer_id = ${schema.user.id} and s.organization_id = ${activeOrganizationId} and se.status = 'active' and s.status in ('active','cancelled') and s.current_period_end > ${new Date()}))`,
-			activeMemberships: sql<number>`(select count(*) from subscription s where s.buyer_id = ${schema.user.id} and s.organization_id = ${activeOrganizationId} and s.status in ('active','cancelled') and s.current_period_end > ${new Date()})`,
+			id: customer.id,
+			name: customer.name,
+			email: customer.email,
+			image: customer.image,
+			totalSpentInSen: sql<number>`coalesce((select sum(co.gross_in_sen) from course_order co where co.buyer_id = ${customerId} and co.organization_id = ${activeOrganizationId} and co.status = 'paid'), 0)`,
+			productsPurchased: sql<number>`(select count(distinct co.product_id) from course_order co where co.buyer_id = ${customerId} and co.organization_id = ${activeOrganizationId} and co.status = 'paid')`,
+			courseAccess: sql<number>`(select count(distinct course_id) from (select oe.course_id from order_entitlement oe inner join course_order co on co.id = oe.order_id where co.buyer_id = ${customerId} and co.organization_id = ${activeOrganizationId} and co.status = 'paid' and oe.status = 'active' union select se.course_id from subscription_entitlement se inner join subscription s on s.id = se.subscription_id where s.buyer_id = ${customerId} and s.organization_id = ${activeOrganizationId} and se.status = 'active' and s.status in ('active','cancelled') and s.current_period_end > ${now}))`,
+			activeMemberships: sql<number>`(select count(*) from subscription s where s.buyer_id = ${customerId} and s.organization_id = ${activeOrganizationId} and s.status in ('active','cancelled') and s.current_period_end > ${now})`,
 		})
-		.from(schema.user)
+		.from(customer)
 		.where(
-			sql`exists (select 1 from course_order co where co.buyer_id = ${schema.user.id} and co.organization_id = ${activeOrganizationId} and co.status in ('paid','refunded')) or exists (select 1 from subscription s where s.buyer_id = ${schema.user.id} and s.organization_id = ${activeOrganizationId})`,
+			sql`exists (select 1 from course_order co where co.buyer_id = ${customerId} and co.organization_id = ${activeOrganizationId} and co.status in ('paid','refunded')) or exists (select 1 from subscription s where s.buyer_id = ${customerId} and s.organization_id = ${activeOrganizationId})`,
 		)
-		.orderBy(asc(schema.user.name));
+		.orderBy(asc(customer.name));
 });
 export const listAdminOrders = createServerFn({ method: "GET" }).handler(
 	async () => {

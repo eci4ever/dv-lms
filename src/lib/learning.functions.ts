@@ -170,6 +170,7 @@ export const listMyLearning = createServerFn({ method: "GET" }).handler(
 	async () => {
 		const session = await requireSession();
 		await expireMemberships(session.user.id);
+		const now = Date.now();
 		return db
 			.select({
 				enrollmentId: schema.enrollment.id,
@@ -189,7 +190,7 @@ export const listMyLearning = createServerFn({ method: "GET" }).handler(
 						and s.buyer_id = ${session.user.id}
 						and se.status = 'active'
 						and s.status in ('active', 'cancelled')
-						and s.current_period_end > ${new Date()}
+						and s.current_period_end > ${now}
 					) then 'membership'
 					when exists (
 						select 1 from order_entitlement oe
