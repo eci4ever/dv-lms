@@ -13,7 +13,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as LibraryRouteImport } from './routes/library'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MembershipsRouteImport } from './routes/memberships'
 import { Route as PurchasesRouteImport } from './routes/purchases'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -57,9 +59,19 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MembershipsRoute = MembershipsRouteImport.update({
+  id: '/memberships',
+  path: '/memberships',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PurchasesRoute = PurchasesRouteImport.update({
@@ -181,7 +193,9 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/memberships': typeof MembershipsRoute
   '/purchases': typeof PurchasesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
@@ -210,7 +224,9 @@ export interface FileRoutesByTo {
   '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/memberships': typeof MembershipsRoute
   '/purchases': typeof PurchasesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
@@ -240,7 +256,9 @@ export interface FileRoutesById {
   '/account': typeof AccountRoute
   '/dashboard': typeof DashboardRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/library': typeof LibraryRoute
   '/login': typeof LoginRoute
+  '/memberships': typeof MembershipsRoute
   '/purchases': typeof PurchasesRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
@@ -271,7 +289,9 @@ export interface FileRouteTypes {
     | '/account'
     | '/dashboard'
     | '/forgot-password'
+    | '/library'
     | '/login'
+    | '/memberships'
     | '/purchases'
     | '/reset-password'
     | '/signup'
@@ -300,7 +320,9 @@ export interface FileRouteTypes {
     | '/account'
     | '/dashboard'
     | '/forgot-password'
+    | '/library'
     | '/login'
+    | '/memberships'
     | '/purchases'
     | '/reset-password'
     | '/signup'
@@ -329,7 +351,9 @@ export interface FileRouteTypes {
     | '/account'
     | '/dashboard'
     | '/forgot-password'
+    | '/library'
     | '/login'
+    | '/memberships'
     | '/purchases'
     | '/reset-password'
     | '/signup'
@@ -359,7 +383,9 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRoute
   DashboardRoute: typeof DashboardRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LibraryRoute: typeof LibraryRoute
   LoginRoute: typeof LoginRoute
+  MembershipsRoute: typeof MembershipsRoute
   PurchasesRoute: typeof PurchasesRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
@@ -414,11 +440,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/memberships': {
+      id: '/memberships'
+      path: '/memberships'
+      fullPath: '/memberships'
+      preLoaderRoute: typeof MembershipsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/purchases': {
@@ -583,7 +623,9 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRoute,
   DashboardRoute: DashboardRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  LibraryRoute: LibraryRoute,
   LoginRoute: LoginRoute,
+  MembershipsRoute: MembershipsRoute,
   PurchasesRoute: PurchasesRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,

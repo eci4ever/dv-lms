@@ -403,7 +403,10 @@ export const saveProduct = createServerFn({ method: "POST" })
 			db
 				.delete(schema.productCourse)
 				.where(eq(schema.productCourse.productId, data.id)),
-			db.delete(schema.offer).where(eq(schema.offer.productId, data.id)),
+			db
+				.update(schema.offer)
+				.set({ status: "inactive", updatedAt: new Date() })
+				.where(eq(schema.offer.productId, data.id)),
 		]);
 		if (data.courseIds.length) {
 			await db.insert(schema.productCourse).values(
@@ -416,13 +419,28 @@ export const saveProduct = createServerFn({ method: "POST" })
 			);
 		}
 		if (data.offers.length) {
-			await db.insert(schema.offer).values(
-				data.offers.map((offer, position) => ({
-					...offer,
-					productId: data.id,
-					position,
-				})),
-			);
+			await db
+				.insert(schema.offer)
+				.values(
+					data.offers.map((offer, position) => ({
+						...offer,
+						productId: data.id,
+						position,
+					})),
+				)
+				.onConflictDoUpdate({
+					target: schema.offer.id,
+					set: {
+						name: sql`excluded.name`,
+						priceInSen: sql`excluded.price_in_sen`,
+						currency: sql`excluded.currency`,
+						billingType: sql`excluded.billing_type`,
+						billingInterval: sql`excluded.billing_interval`,
+						status: sql`excluded.status`,
+						position: sql`excluded.position`,
+						updatedAt: new Date(),
+					},
+				});
 		}
 		return { id: data.id, slug };
 	});

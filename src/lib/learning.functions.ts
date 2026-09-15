@@ -4,6 +4,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
+import { expireMemberships } from "@/lib/access.server";
 import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
 
@@ -81,6 +82,7 @@ export const getEnrollmentState = createServerFn({ method: "GET" })
 	.handler(async ({ data }) => {
 		const session = await sessionOrNull();
 		if (!session) return { signedIn: false as const, enrollment: null };
+		await expireMemberships(session.user.id);
 		const [result] = await db
 			.select({
 				courseId: schema.course.id,
@@ -120,6 +122,7 @@ export const enrollInFreeCourse = createServerFn({ method: "POST" })
 	.validator(validateSlug)
 	.handler(async ({ data }) => {
 		const session = await requireSession();
+		await expireMemberships(session.user.id);
 		const [course] = await db
 			.select({ id: schema.course.id, priceInSen: schema.course.priceInSen })
 			.from(schema.course)
@@ -166,6 +169,7 @@ export const enrollInFreeCourse = createServerFn({ method: "POST" })
 export const listMyLearning = createServerFn({ method: "GET" }).handler(
 	async () => {
 		const session = await requireSession();
+		await expireMemberships(session.user.id);
 		return db
 			.select({
 				enrollmentId: schema.enrollment.id,
@@ -177,6 +181,34 @@ export const listMyLearning = createServerFn({ method: "GET" }).handler(
 				summary: schema.course.summary,
 				thumbnailUrl: schema.course.thumbnailUrl,
 				organizationName: schema.organization.name,
+				accessSource: sql<string>`case
+					when exists (
+						select 1 from subscription_entitlement se
+						inner join subscription s on s.id = se.subscription_id
+						where se.course_id = ${schema.course.id}
+						and s.buyer_id = ${session.user.id}
+						and se.status = 'active'
+						and s.status in ('active', 'cancelled')
+						and s.current_period_end > ${new Date()}
+					) then 'membership'
+					when exists (
+						select 1 from order_entitlement oe
+						inner join course_order co on co.id = oe.order_id
+						left join product p on p.id = co.product_id
+						where oe.course_id = ${schema.course.id}
+						and co.buyer_id = ${session.user.id}
+						and oe.status = 'active' and co.status = 'paid'
+						and p.type = 'bundle'
+					) then 'bundle'
+					when exists (
+						select 1 from order_entitlement oe
+						inner join course_order co on co.id = oe.order_id
+						where oe.course_id = ${schema.course.id}
+						and co.buyer_id = ${session.user.id}
+						and oe.status = 'active' and co.status = 'paid'
+					) then 'purchased'
+					else 'free'
+				end`,
 				firstLessonId: sql<string | null>`(
 					select l.id from lesson l
 					inner join course_section cs on l.section_id = cs.id
@@ -227,6 +259,7 @@ export const getLearningCourse = createServerFn({ method: "GET" })
 	.validator(validateLearningInput)
 	.handler(async ({ data }) => {
 		const session = await requireSession();
+		await expireMemberships(session.user.id);
 		const [access] = await db
 			.select({
 				enrollmentId: schema.enrollment.id,
@@ -311,6 +344,7 @@ export const updateLessonProgress = createServerFn({ method: "POST" })
 	.validator(validateProgressInput)
 	.handler(async ({ data }) => {
 		const session = await requireSession();
+		await expireMemberships(session.user.id);
 		const [access] = await db
 			.select({
 				enrollmentId: schema.enrollment.id,

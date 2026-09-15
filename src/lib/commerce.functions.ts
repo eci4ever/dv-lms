@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/d1";
 
 import {
 	activateEnrollment,
+	expireMemberships,
 	hasPermanentAccess,
 	reconcileCourseAccess,
 } from "@/lib/access.server";
@@ -334,10 +335,7 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 		}
 		if (order.status !== "pending" || order.expiresAt <= new Date())
 			throw new Error("This checkout has expired.");
-		if (!order.offerId || order.billingTypeSnapshot !== "one_time")
-			throw new Error(
-				"Membership activation is available in the next milestone.",
-			);
+		if (!order.offerId) throw new Error("This order has no offer.");
 		const courses = await offerCourses(order.offerId);
 		if (
 			!courses.length ||
@@ -345,6 +343,66 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 		)
 			throw new Error("A course in this product is unavailable.");
 		const now = new Date();
+		if (order.billingTypeSnapshot === "recurring") {
+			const subscriptionId = `subscription-${order.id}`;
+			const periodEnd = new Date(now);
+			periodEnd.setUTCDate(
+				periodEnd.getUTCDate() +
+					(order.billingIntervalSnapshot === "year" ? 365 : 30),
+			);
+			await db.batch([
+				db
+					.insert(schema.subscription)
+					.values({
+						id: subscriptionId,
+						buyerId: session.user.id,
+						offerId: order.offerId,
+						organizationId: order.organizationId,
+						currentPeriodStart: now,
+						currentPeriodEnd: periodEnd,
+					})
+					.onConflictDoNothing(),
+				db
+					.update(schema.courseOrder)
+					.set({
+						status: "paid",
+						subscriptionId,
+						mockPaymentReference: `MOCK-${order.id}`,
+						paidAt: now,
+						updatedAt: now,
+					})
+					.where(
+						and(
+							eq(schema.courseOrder.id, order.id),
+							eq(schema.courseOrder.status, "pending"),
+						),
+					),
+				...courses.map((course) =>
+					db
+						.insert(schema.subscriptionEntitlement)
+						.values({
+							id: crypto.randomUUID(),
+							subscriptionId,
+							courseId: course.id,
+						})
+						.onConflictDoUpdate({
+							target: [
+								schema.subscriptionEntitlement.subscriptionId,
+								schema.subscriptionEntitlement.courseId,
+							],
+							set: { status: "active", revokedAt: null },
+						}),
+				),
+			]);
+			for (const course of courses)
+				await activateEnrollment(session.user.id, course.id, now);
+			return {
+				paid: true,
+				courseSlug: courses[0].slug,
+				firstLessonId: await firstLessonId(courses[0].id),
+				subscriptionId,
+			};
+		}
 		await db.batch([
 			db
 				.update(schema.courseOrder)
@@ -385,6 +443,174 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 			firstLessonId: await firstLessonId(courses[0].id),
 			subscriptionId: null,
 		};
+	});
+
+function validateRenewal(input: unknown) {
+	const values = record(input);
+	return {
+		subscriptionId: required(values.subscriptionId, "Membership"),
+		renewalKey: required(values.renewalKey, "Renewal key"),
+	};
+}
+
+export const listMemberships = createServerFn({ method: "GET" }).handler(
+	async () => {
+		const { session } = await requireSession();
+		await expireMemberships(session.user.id);
+		return db
+			.select({
+				id: schema.subscription.id,
+				status: schema.subscription.status,
+				currentPeriodStart: schema.subscription.currentPeriodStart,
+				currentPeriodEnd: schema.subscription.currentPeriodEnd,
+				cancelAtPeriodEnd: schema.subscription.cancelAtPeriodEnd,
+				cancelledAt: schema.subscription.cancelledAt,
+				productName: schema.product.name,
+				productSlug: schema.product.slug,
+				creatorName: schema.organization.name,
+				creatorSlug: schema.organization.slug,
+				offerName: schema.offer.name,
+				priceInSen: schema.offer.priceInSen,
+				billingInterval: schema.offer.billingInterval,
+			})
+			.from(schema.subscription)
+			.innerJoin(schema.offer, eq(schema.subscription.offerId, schema.offer.id))
+			.innerJoin(schema.product, eq(schema.offer.productId, schema.product.id))
+			.innerJoin(
+				schema.organization,
+				eq(schema.subscription.organizationId, schema.organization.id),
+			)
+			.where(eq(schema.subscription.buyerId, session.user.id))
+			.orderBy(desc(schema.subscription.createdAt));
+	},
+);
+
+export const cancelMembership = createServerFn({ method: "POST" })
+	.validator((input: unknown) => ({
+		id: required(record(input).id, "Membership"),
+	}))
+	.handler(async ({ data }) => {
+		const { session } = await requireSession();
+		await expireMemberships(session.user.id);
+		const [item] = await db
+			.select({ id: schema.subscription.id })
+			.from(schema.subscription)
+			.where(
+				and(
+					eq(schema.subscription.id, data.id),
+					eq(schema.subscription.buyerId, session.user.id),
+					eq(schema.subscription.status, "active"),
+				),
+			)
+			.limit(1);
+		if (!item) throw new Error("Active membership not found.");
+		await db
+			.update(schema.subscription)
+			.set({
+				status: "cancelled",
+				cancelAtPeriodEnd: true,
+				cancelledAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.where(eq(schema.subscription.id, item.id));
+		return { cancelled: true };
+	});
+
+export const renewMockMembership = createServerFn({ method: "POST" })
+	.validator(validateRenewal)
+	.handler(async ({ data }) => {
+		const { session } = await requireSession();
+		await expireMemberships(session.user.id);
+		const reference = `MOCK-RENEW-${data.renewalKey}`;
+		const [existing] = await db
+			.select({ id: schema.courseOrder.id })
+			.from(schema.courseOrder)
+			.where(
+				and(
+					eq(schema.courseOrder.buyerId, session.user.id),
+					eq(schema.courseOrder.mockPaymentReference, reference),
+				),
+			)
+			.limit(1);
+		if (existing) return { orderId: existing.id, reused: true };
+		const [item] = await db
+			.select({
+				id: schema.subscription.id,
+				offerId: schema.subscription.offerId,
+				organizationId: schema.subscription.organizationId,
+				currentPeriodEnd: schema.subscription.currentPeriodEnd,
+				productId: schema.product.id,
+				productName: schema.product.name,
+				productStatus: schema.product.status,
+				offerName: schema.offer.name,
+				offerStatus: schema.offer.status,
+				priceInSen: schema.offer.priceInSen,
+				currency: schema.offer.currency,
+				billingInterval: schema.offer.billingInterval,
+			})
+			.from(schema.subscription)
+			.innerJoin(schema.offer, eq(schema.subscription.offerId, schema.offer.id))
+			.innerJoin(schema.product, eq(schema.offer.productId, schema.product.id))
+			.where(
+				and(
+					eq(schema.subscription.id, data.subscriptionId),
+					eq(schema.subscription.buyerId, session.user.id),
+				),
+			)
+			.limit(1);
+		if (!item) throw new Error("Membership not found.");
+		if (item.offerStatus !== "active" || item.productStatus !== "published")
+			throw new Error("This membership offer is unavailable.");
+		const now = new Date();
+		const start = item.currentPeriodEnd > now ? item.currentPeriodEnd : now;
+		const end = new Date(start);
+		end.setUTCDate(
+			end.getUTCDate() + (item.billingInterval === "year" ? 365 : 30),
+		);
+		const courses = await offerCourses(item.offerId);
+		const id = crypto.randomUUID();
+		const fee = Math.round((item.priceInSen * platformFeePercent) / 100);
+		await db.batch([
+			db.insert(schema.courseOrder).values({
+				id,
+				buyerId: session.user.id,
+				courseId: courses[0]?.id ?? null,
+				productId: item.productId,
+				offerId: item.offerId,
+				subscriptionId: item.id,
+				organizationId: item.organizationId,
+				currency: item.currency,
+				grossInSen: item.priceInSen,
+				platformFeeInSen: fee,
+				sellerNetInSen: item.priceInSen - fee,
+				status: "paid",
+				mockPaymentReference: reference,
+				productNameSnapshot: item.productName,
+				offerNameSnapshot: item.offerName,
+				billingTypeSnapshot: "recurring",
+				billingIntervalSnapshot: item.billingInterval,
+				expiresAt: now,
+				paidAt: now,
+			}),
+			db
+				.update(schema.subscription)
+				.set({
+					status: "active",
+					currentPeriodStart: start,
+					currentPeriodEnd: end,
+					cancelAtPeriodEnd: false,
+					cancelledAt: null,
+					updatedAt: now,
+				})
+				.where(eq(schema.subscription.id, item.id)),
+			db
+				.update(schema.subscriptionEntitlement)
+				.set({ status: "active", revokedAt: null })
+				.where(eq(schema.subscriptionEntitlement.subscriptionId, item.id)),
+		]);
+		for (const course of courses)
+			await activateEnrollment(session.user.id, course.id, now);
+		return { orderId: id, reused: false };
 	});
 
 export const listPurchases = createServerFn({ method: "GET" }).handler(
@@ -473,6 +699,7 @@ export const resolveRefund = createServerFn({ method: "POST" })
 				orderId: schema.courseOrder.id,
 				orderStatus: schema.courseOrder.status,
 				buyerId: schema.courseOrder.buyerId,
+				subscriptionId: schema.courseOrder.subscriptionId,
 			})
 			.from(schema.refundRequest)
 			.innerJoin(
@@ -506,24 +733,69 @@ export const resolveRefund = createServerFn({ method: "POST" })
 			await resolution;
 			return { status: data.decision };
 		}
-		const entitlements = await db
+		const orderEntitlements = await db
 			.select({ courseId: schema.orderEntitlement.courseId })
 			.from(schema.orderEntitlement)
 			.where(eq(schema.orderEntitlement.orderId, request.orderId));
-		await db.batch([
-			resolution,
-			db
-				.update(schema.courseOrder)
-				.set({ status: "refunded", refundedAt: now, updatedAt: now })
-				.where(eq(schema.courseOrder.id, request.orderId)),
-			db
-				.update(schema.orderEntitlement)
-				.set({ status: "revoked", revokedAt: now })
-				.where(eq(schema.orderEntitlement.orderId, request.orderId)),
-		]);
+		const subscriptionEntitlements = request.subscriptionId
+			? await db
+					.select({ courseId: schema.subscriptionEntitlement.courseId })
+					.from(schema.subscriptionEntitlement)
+					.where(
+						eq(
+							schema.subscriptionEntitlement.subscriptionId,
+							request.subscriptionId,
+						),
+					)
+			: [];
+		if (request.subscriptionId) {
+			await db.batch([
+				resolution,
+				db
+					.update(schema.courseOrder)
+					.set({ status: "refunded", refundedAt: now, updatedAt: now })
+					.where(eq(schema.courseOrder.id, request.orderId)),
+				db
+					.update(schema.orderEntitlement)
+					.set({ status: "revoked", revokedAt: now })
+					.where(eq(schema.orderEntitlement.orderId, request.orderId)),
+				db
+					.update(schema.subscription)
+					.set({
+						status: "refunded",
+						currentPeriodEnd: now,
+						cancelAtPeriodEnd: false,
+						updatedAt: now,
+					})
+					.where(eq(schema.subscription.id, request.subscriptionId)),
+				db
+					.update(schema.subscriptionEntitlement)
+					.set({ status: "revoked", revokedAt: now })
+					.where(
+						eq(
+							schema.subscriptionEntitlement.subscriptionId,
+							request.subscriptionId,
+						),
+					),
+			]);
+		} else {
+			await db.batch([
+				resolution,
+				db
+					.update(schema.courseOrder)
+					.set({ status: "refunded", refundedAt: now, updatedAt: now })
+					.where(eq(schema.courseOrder.id, request.orderId)),
+				db
+					.update(schema.orderEntitlement)
+					.set({ status: "revoked", revokedAt: now })
+					.where(eq(schema.orderEntitlement.orderId, request.orderId)),
+			]);
+		}
 		await reconcileCourseAccess(
 			request.buyerId,
-			entitlements.map((item) => item.courseId),
+			[...orderEntitlements, ...subscriptionEntitlements].map(
+				(item) => item.courseId,
+			),
 			now,
 		);
 		return { status: data.decision };

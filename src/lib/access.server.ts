@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { and, eq, gt, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import * as schema from "@/lib/auth-schema";
@@ -126,5 +126,41 @@ export async function reconcileCourseAccess(
 						eq(schema.enrollment.courseId, courseId),
 					),
 				);
+	}
+}
+
+export async function expireMemberships(userId?: string, now = new Date()) {
+	const filters = [
+		inArray(schema.subscription.status, ["active", "cancelled"]),
+		lte(schema.subscription.currentPeriodEnd, now),
+	];
+	if (userId) filters.push(eq(schema.subscription.buyerId, userId));
+	const expired = await db
+		.select({
+			id: schema.subscription.id,
+			buyerId: schema.subscription.buyerId,
+		})
+		.from(schema.subscription)
+		.where(and(...filters));
+	for (const item of expired) {
+		const entitlements = await db
+			.select({ courseId: schema.subscriptionEntitlement.courseId })
+			.from(schema.subscriptionEntitlement)
+			.where(eq(schema.subscriptionEntitlement.subscriptionId, item.id));
+		await db.batch([
+			db
+				.update(schema.subscription)
+				.set({ status: "expired", updatedAt: now })
+				.where(eq(schema.subscription.id, item.id)),
+			db
+				.update(schema.subscriptionEntitlement)
+				.set({ status: "revoked", revokedAt: now })
+				.where(eq(schema.subscriptionEntitlement.subscriptionId, item.id)),
+		]);
+		await reconcileCourseAccess(
+			item.buyerId,
+			entitlements.map((entry) => entry.courseId),
+			now,
+		);
 	}
 }
