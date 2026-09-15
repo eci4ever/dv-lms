@@ -1,9 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import {
 	BadgeDollarSignIcon,
+	CalendarClockIcon,
 	CircleDollarSignIcon,
 	PercentIcon,
+	RotateCcwIcon,
 } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { OrderStatusBadge } from "@/components/order-status-badge";
@@ -33,7 +36,37 @@ export const Route = createFileRoute("/workspace/sales")({
 function OrganizationSales() {
 	const dashboard = Route.useRouteContext();
 	const { orders, totals } = Route.useLoaderData();
+	const [product, setProduct] = useState("all");
+	const [offer, setOffer] = useState("all");
+	const [billing, setBilling] = useState("all");
+	const [status, setStatus] = useState("all");
+	const products = useMemo(
+		() =>
+			[
+				...new Set(orders.map((order) => order.productName).filter(Boolean)),
+			] as string[],
+		[orders],
+	);
+	const offers = useMemo(
+		() =>
+			[
+				...new Set(orders.map((order) => order.offerName).filter(Boolean)),
+			] as string[],
+		[orders],
+	);
+	const filteredOrders = orders.filter(
+		(order) =>
+			(product === "all" || order.productName === product) &&
+			(offer === "all" || order.offerName === offer) &&
+			(billing === "all" || order.billingType === billing) &&
+			(status === "all" || order.status === status),
+	);
 	const metrics = [
+		{
+			label: "Refunds",
+			value: totals.refundsInSen,
+			icon: RotateCcwIcon,
+		},
 		{
 			label: "Gross sales",
 			value: totals.grossInSen,
@@ -84,7 +117,7 @@ function OrganizationSales() {
 								Revenue reflects paid orders after the 10% platform fee.
 							</p>
 						</div>
-						<div className="grid gap-4 sm:grid-cols-3">
+						<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
 							{metrics.map((metric) => (
 								<Card key={metric.label}>
 									<CardHeader className="flex-row items-center justify-between pb-2">
@@ -101,12 +134,86 @@ function OrganizationSales() {
 								</Card>
 							))}
 						</div>
+						<div className="grid gap-4 sm:grid-cols-2">
+							<Card>
+								<CardHeader className="flex-row items-center justify-between pb-2">
+									<CardTitle className="text-sm font-medium">
+										Active memberships
+									</CardTitle>
+									<CalendarClockIcon className="size-4 text-muted-foreground" />
+								</CardHeader>
+								<CardContent>
+									<p className="text-2xl font-semibold">
+										{totals.activeMemberships}
+									</p>
+								</CardContent>
+							</Card>
+							<Card>
+								<CardHeader className="flex-row items-center justify-between pb-2">
+									<CardTitle className="text-sm font-medium">
+										Mock MRR
+									</CardTitle>
+									<CircleDollarSignIcon className="size-4 text-muted-foreground" />
+								</CardHeader>
+								<CardContent>
+									<p className="text-2xl font-semibold">
+										{formatCoursePrice(totals.mrrInSen)}
+									</p>
+								</CardContent>
+							</Card>
+						</div>
 						<Card>
 							<CardHeader>
 								<CardTitle>Orders</CardTitle>
+								<div className="grid gap-2 pt-2 sm:grid-cols-2 xl:grid-cols-4">
+									<select
+										className="h-9 rounded-md border bg-background px-3 text-sm"
+										value={product}
+										onChange={(event) => setProduct(event.target.value)}
+									>
+										<option value="all">All products</option>
+										{products.map((name) => (
+											<option key={name} value={name}>
+												{name}
+											</option>
+										))}
+									</select>
+									<select
+										className="h-9 rounded-md border bg-background px-3 text-sm"
+										value={offer}
+										onChange={(event) => setOffer(event.target.value)}
+									>
+										<option value="all">All offers</option>
+										{offers.map((name) => (
+											<option key={name} value={name}>
+												{name}
+											</option>
+										))}
+									</select>
+									<select
+										className="h-9 rounded-md border bg-background px-3 text-sm"
+										value={billing}
+										onChange={(event) => setBilling(event.target.value)}
+									>
+										<option value="all">All billing</option>
+										<option value="one_time">One-time</option>
+										<option value="recurring">Recurring</option>
+									</select>
+									<select
+										className="h-9 rounded-md border bg-background px-3 text-sm"
+										value={status}
+										onChange={(event) => setStatus(event.target.value)}
+									>
+										<option value="all">All statuses</option>
+										<option value="paid">Paid</option>
+										<option value="refunded">Refunded</option>
+										<option value="pending">Pending</option>
+										<option value="expired">Expired</option>
+									</select>
+								</div>
 							</CardHeader>
 							<CardContent>
-								{orders.length ? (
+								{filteredOrders.length ? (
 									<div className="overflow-x-auto">
 										<table className="w-full text-left text-sm">
 											<thead className="border-b text-muted-foreground">
@@ -121,10 +228,13 @@ function OrganizationSales() {
 												</tr>
 											</thead>
 											<tbody className="divide-y">
-												{orders.map((order) => (
+												{filteredOrders.map((order) => (
 													<tr key={order.id}>
 														<td className="px-3 py-3 font-medium">
-															{order.courseTitle}
+															{order.productName ?? order.courseTitle}
+															<p className="text-xs font-normal text-muted-foreground">
+																{order.offerName ?? "Legacy offer"}
+															</p>
 														</td>
 														<td className="px-3 py-3">
 															<p>{order.buyerName}</p>

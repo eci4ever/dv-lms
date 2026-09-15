@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, asc, desc, eq, gt, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import {
@@ -664,6 +664,7 @@ export const listOrganizationSales = createServerFn({ method: "GET" }).handler(
 	async () => {
 		const { activeOrganizationId } = await requireOwner();
 		await expirePendingOrders();
+		await expireMemberships();
 		const orders = await orderQuery()
 			.where(eq(schema.courseOrder.organizationId, activeOrganizationId))
 			.orderBy(desc(schema.courseOrder.createdAt));
@@ -674,13 +675,63 @@ export const listOrganizationSales = createServerFn({ method: "GET" }).handler(
 					sum.platformFeeInSen += order.platformFeeInSen;
 					sum.sellerNetInSen += order.sellerNetInSen;
 				}
+				if (order.status === "refunded") sum.refundsInSen += order.grossInSen;
 				return sum;
 			},
-			{ grossInSen: 0, platformFeeInSen: 0, sellerNetInSen: 0 },
+			{
+				grossInSen: 0,
+				refundsInSen: 0,
+				platformFeeInSen: 0,
+				sellerNetInSen: 0,
+			},
 		);
-		return { orders, totals };
+		const activeMemberships = await db
+			.select({
+				count: sql<number>`count(*)`,
+				mrrInSen: sql<number>`coalesce(sum(case when ${schema.offer.billingInterval} = 'year' then round(${schema.offer.priceInSen} / 12.0) else ${schema.offer.priceInSen} end), 0)`,
+			})
+			.from(schema.subscription)
+			.innerJoin(schema.offer, eq(schema.subscription.offerId, schema.offer.id))
+			.where(
+				and(
+					eq(schema.subscription.organizationId, activeOrganizationId),
+					inArray(schema.subscription.status, ["active", "cancelled"]),
+					gt(schema.subscription.currentPeriodEnd, new Date()),
+				),
+			);
+		return {
+			orders,
+			totals: {
+				...totals,
+				activeMemberships: Number(activeMemberships[0]?.count ?? 0),
+				mrrInSen: Number(activeMemberships[0]?.mrrInSen ?? 0),
+			},
+		};
 	},
 );
+
+export const listOrganizationCustomers = createServerFn({
+	method: "GET",
+}).handler(async () => {
+	const { activeOrganizationId } = await requireOwner();
+	await expireMemberships();
+	return db
+		.select({
+			id: schema.user.id,
+			name: schema.user.name,
+			email: schema.user.email,
+			image: schema.user.image,
+			totalSpentInSen: sql<number>`coalesce((select sum(co.gross_in_sen) from course_order co where co.buyer_id = ${schema.user.id} and co.organization_id = ${activeOrganizationId} and co.status = 'paid'), 0)`,
+			productsPurchased: sql<number>`(select count(distinct co.product_id) from course_order co where co.buyer_id = ${schema.user.id} and co.organization_id = ${activeOrganizationId} and co.status = 'paid')`,
+			courseAccess: sql<number>`(select count(distinct course_id) from (select oe.course_id from order_entitlement oe inner join course_order co on co.id = oe.order_id where co.buyer_id = ${schema.user.id} and co.organization_id = ${activeOrganizationId} and co.status = 'paid' and oe.status = 'active' union select se.course_id from subscription_entitlement se inner join subscription s on s.id = se.subscription_id where s.buyer_id = ${schema.user.id} and s.organization_id = ${activeOrganizationId} and se.status = 'active' and s.status in ('active','cancelled') and s.current_period_end > ${new Date()}))`,
+			activeMemberships: sql<number>`(select count(*) from subscription s where s.buyer_id = ${schema.user.id} and s.organization_id = ${activeOrganizationId} and s.status in ('active','cancelled') and s.current_period_end > ${new Date()})`,
+		})
+		.from(schema.user)
+		.where(
+			sql`exists (select 1 from course_order co where co.buyer_id = ${schema.user.id} and co.organization_id = ${activeOrganizationId} and co.status in ('paid','refunded')) or exists (select 1 from subscription s where s.buyer_id = ${schema.user.id} and s.organization_id = ${activeOrganizationId})`,
+		)
+		.orderBy(asc(schema.user.name));
+});
 export const listAdminOrders = createServerFn({ method: "GET" }).handler(
 	async () => {
 		await requirePlatformAdmin();

@@ -342,7 +342,7 @@ function EnrollmentAction({
 					params: { slug, lessonId: result.firstLessonId },
 				});
 			} else {
-				await navigate({ to: "/learning" });
+				await navigate({ to: "/library" });
 			}
 		} catch (error) {
 			toast.error(

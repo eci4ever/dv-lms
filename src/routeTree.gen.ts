@@ -28,6 +28,7 @@ import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
 import { Route as CreatorsSlugRouteImport } from './routes/creators/$slug'
 import { Route as LearningIndexRouteImport } from './routes/learning/index'
+import { Route as WorkspaceCustomersRouteImport } from './routes/workspace/customers'
 import { Route as WorkspaceSalesRouteImport } from './routes/workspace/sales'
 import { Route as WorkspaceSettingsRouteImport } from './routes/workspace/settings'
 import { Route as WorkspaceStorefrontRouteImport } from './routes/workspace/storefront'
@@ -134,6 +135,11 @@ const LearningIndexRoute = LearningIndexRouteImport.update({
   path: '/learning/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkspaceCustomersRoute = WorkspaceCustomersRouteImport.update({
+  id: '/workspace/customers',
+  path: '/workspace/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkspaceSalesRoute = WorkspaceSalesRouteImport.update({
   id: '/workspace/sales',
   path: '/workspace/sales',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
+  '/workspace/customers': typeof WorkspaceCustomersRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
@@ -237,6 +244,7 @@ export interface FileRoutesByTo {
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
+  '/workspace/customers': typeof WorkspaceCustomersRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
+  '/workspace/customers': typeof WorkspaceCustomersRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
@@ -302,6 +311,7 @@ export interface FileRouteTypes {
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
+    | '/workspace/customers'
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
@@ -333,6 +343,7 @@ export interface FileRouteTypes {
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
+    | '/workspace/customers'
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
+    | '/workspace/customers'
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
@@ -396,6 +408,7 @@ export interface RootRouteChildren {
   CheckoutOrderIdRoute: typeof CheckoutOrderIdRoute
   CoursesSlugRoute: typeof CoursesSlugRoute
   CreatorsSlugRoute: typeof CreatorsSlugRoute
+  WorkspaceCustomersRoute: typeof WorkspaceCustomersRoute
   WorkspaceSalesRoute: typeof WorkspaceSalesRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceStorefrontRoute: typeof WorkspaceStorefrontRoute
@@ -545,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearningIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workspace/customers': {
+      id: '/workspace/customers'
+      path: '/workspace/customers'
+      fullPath: '/workspace/customers'
+      preLoaderRoute: typeof WorkspaceCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workspace/sales': {
       id: '/workspace/sales'
       path: '/workspace/sales'
@@ -636,6 +656,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutOrderIdRoute: CheckoutOrderIdRoute,
   CoursesSlugRoute: CoursesSlugRoute,
   CreatorsSlugRoute: CreatorsSlugRoute,
+  WorkspaceCustomersRoute: WorkspaceCustomersRoute,
   WorkspaceSalesRoute: WorkspaceSalesRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceStorefrontRoute: WorkspaceStorefrontRoute,

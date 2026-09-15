@@ -102,7 +102,7 @@ function LessonPlayer() {
 			<header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
 				<div className="flex h-16 items-center gap-3 px-4 sm:px-6">
 					<Button
-						render={<Link to="/learning" />}
+						render={<Link to="/library" />}
 						variant="ghost"
 						size="icon"
 						aria-label="Back to My Learning"

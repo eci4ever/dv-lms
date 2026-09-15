@@ -3,17 +3,12 @@ import {
 	ArrowLeftIcon,
 	BookOpenIcon,
 	Building2Icon,
-	ChartNoAxesColumnIncreasingIcon,
-	ClipboardCheckIcon,
 	CreditCardIcon,
 	GaugeIcon,
 	Layers3Icon,
 	LayoutDashboardIcon,
 	LibraryIcon,
 	type LucideIcon,
-	MailPlusIcon,
-	MegaphoneIcon,
-	PanelsTopLeftIcon,
 	ScrollTextIcon,
 	Settings2Icon,
 	ShieldCheckIcon,
@@ -62,6 +57,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activeItem?:
 		| "account"
 		| "courses"
+		| "customers"
 		| "dashboard"
 		| "library"
 		| "learning"
@@ -111,10 +107,6 @@ export function AppSidebar({
 }: AppSidebarProps) {
 	const isAdmin =
 		!isImpersonating && (user.role?.split(",").includes("admin") ?? false);
-	const organizationRoles = organizationRole?.split(",") ?? [];
-	const canManageOrganization = organizationRoles.some((role) =>
-		["owner", "admin"].includes(role),
-	);
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
@@ -203,23 +195,15 @@ export function AppSidebar({
 												tooltip="Memberships"
 											/>
 										</SidebarMenuItem>
-										<MockSidebarItem
-											icon={ClipboardCheckIcon}
-											label="Assignments"
-										/>
-										<MockSidebarItem
-											icon={ChartNoAxesColumnIncreasingIcon}
-											label="Progress"
-										/>
 										<SidebarMenuItem>
 											<SidebarMenuButton
 												render={
 													<Link to="/courses">
 														<LibraryIcon />
-														<span>Course Catalog</span>
+														<span>Marketplace</span>
 													</Link>
 												}
-												tooltip="Course Catalog"
+												tooltip="Marketplace"
 											/>
 										</SidebarMenuItem>
 									</SidebarMenu>
@@ -229,21 +213,6 @@ export function AppSidebar({
 								<SidebarGroupLabel>Workspace</SidebarGroupLabel>
 								<SidebarGroupContent>
 									<SidebarMenu>
-										<MockSidebarItem
-											icon={PanelsTopLeftIcon}
-											label="Overview"
-										/>
-										<MockSidebarItem icon={UsersRoundIcon} label="Members" />
-										<MockSidebarItem
-											icon={MegaphoneIcon}
-											label="Announcements"
-										/>
-										{canManageOrganization ? (
-											<MockSidebarItem
-												icon={MailPlusIcon}
-												label="Invitations"
-											/>
-										) : null}
 										{isOrganizationOwner ? (
 											<SidebarMenuItem>
 												<SidebarMenuButton
@@ -276,13 +245,13 @@ export function AppSidebar({
 											<SidebarMenuItem>
 												<SidebarMenuButton
 													render={
-														<Link to="/workspace/courses">
-															<BookOpenIcon />
-															<span>Course Setup</span>
+														<Link to="/workspace/customers">
+															<UsersRoundIcon />
+															<span>Customers</span>
 														</Link>
 													}
-													isActive={activeItem === "courses"}
-													tooltip="Course Setup"
+													isActive={activeItem === "customers"}
+													tooltip="Customers"
 												/>
 											</SidebarMenuItem>
 										) : null}

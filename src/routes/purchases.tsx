@@ -173,7 +173,7 @@ function PurchasesPage() {
 													) : null}
 													{purchase.status === "paid" ? (
 														<Button
-															render={<Link to="/learning" />}
+															render={<Link to="/library" />}
 															size="sm"
 															variant="outline"
 														>

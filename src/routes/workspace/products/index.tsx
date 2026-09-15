@@ -109,10 +109,18 @@ function Products() {
 									Sell one course, a bundle, or recurring membership access.
 								</p>
 							</div>
-							<Button onClick={() => setOpen(true)}>
-								<PlusIcon />
-								New product
-							</Button>
+							<div className="flex gap-2">
+								<Button
+									variant="outline"
+									render={<Link to="/workspace/courses" />}
+								>
+									Manage courses
+								</Button>
+								<Button onClick={() => setOpen(true)}>
+									<PlusIcon />
+									New product
+								</Button>
+							</div>
 						</div>
 						{products.length ? (
 							<div className="grid gap-4 md:grid-cols-2">

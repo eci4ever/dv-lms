@@ -130,7 +130,7 @@ function AdminOrders() {
 												<tr>
 													<th className="px-3 py-3 font-medium">Order</th>
 													<th className="px-3 py-3 font-medium">
-														Course / organization
+														Product / offer
 													</th>
 													<th className="px-3 py-3 font-medium">Buyer</th>
 													<th className="px-3 py-3 font-medium">Amount</th>
@@ -152,10 +152,23 @@ function AdminOrders() {
 															</p>
 														</td>
 														<td className="px-3 py-3">
-															<p className="font-medium">{order.courseTitle}</p>
+															<p className="font-medium">
+																{order.productName ?? order.courseTitle}
+															</p>
+															<p className="text-xs text-muted-foreground">
+																{order.offerName ?? "Legacy offer"}
+																{order.billingType === "recurring"
+																	? ` · ${order.billingInterval}ly`
+																	: ""}
+															</p>
 															<p className="text-xs text-muted-foreground">
 																{order.organizationName}
 															</p>
+															{order.subscriptionId ? (
+																<p className="mt-1 font-mono text-[10px] text-muted-foreground">
+																	Membership {order.subscriptionId.slice(0, 8)}
+																</p>
+															) : null}
 														</td>
 														<td className="px-3 py-3">
 															<p>{order.buyerName}</p>

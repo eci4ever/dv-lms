@@ -52,7 +52,7 @@ function CheckoutPage() {
 					},
 				});
 			} else {
-				await navigate({ to: "/learning" });
+				await navigate({ to: "/library" });
 			}
 		} catch (error) {
 			toast.error(
@@ -167,7 +167,7 @@ function CheckoutPage() {
 								</Button>
 							) : order.status === "paid" ? (
 								<Button
-									render={<Link to="/learning" />}
+									render={<Link to="/library" />}
 									className="w-full"
 									size="lg"
 								>
