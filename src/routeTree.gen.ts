@@ -23,6 +23,7 @@ import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as CheckoutOrderIdRouteImport } from './routes/checkout/$orderId'
 import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
@@ -108,6 +109,11 @@ const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAnalyticsRoute = ApiAnalyticsRouteImport.update({
+  id: '/api/analytics',
+  path: '/api/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckoutOrderIdRoute = CheckoutOrderIdRouteImport.update({
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/users'
+    | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/users'
+    | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/users'
+    | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
@@ -405,6 +417,7 @@ export interface RootRouteChildren {
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminUsersRoute: typeof AdminUsersRoute
+  ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   CheckoutOrderIdRoute: typeof CheckoutOrderIdRoute
   CoursesSlugRoute: typeof CoursesSlugRoute
   CreatorsSlugRoute: typeof CreatorsSlugRoute
@@ -521,6 +534,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/users'
       fullPath: '/admin/users'
       preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/analytics': {
+      id: '/api/analytics'
+      path: '/api/analytics'
+      fullPath: '/api/analytics'
+      preLoaderRoute: typeof ApiAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout/$orderId': {
@@ -653,6 +673,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminOrdersRoute: AdminOrdersRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminUsersRoute: AdminUsersRoute,
+  ApiAnalyticsRoute: ApiAnalyticsRoute,
   CheckoutOrderIdRoute: CheckoutOrderIdRoute,
   CoursesSlugRoute: CoursesSlugRoute,
   CreatorsSlugRoute: CreatorsSlugRoute,
@@ -674,12 +695,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

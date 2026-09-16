@@ -11,6 +11,11 @@ import {
 	hasPermanentAccess,
 	reconcileCourseAccess,
 } from "@/lib/access.server";
+import {
+	analyticsCookieName,
+	cookieValue,
+	recordAnalyticsEvent,
+} from "@/lib/analytics.server";
 import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
 
@@ -208,7 +213,7 @@ function orderQuery() {
 export const createCheckout = createServerFn({ method: "POST" })
 	.validator(validateOffer)
 	.handler(async ({ data }) => {
-		const { session } = await requireSession();
+		const { headers, session } = await requireSession();
 		await expirePendingOrders(session.user.id);
 		const [offer] = await db
 			.select({
@@ -260,7 +265,20 @@ export const createCheckout = createServerFn({ method: "POST" })
 			)
 			.orderBy(desc(schema.courseOrder.createdAt))
 			.limit(1);
-		if (pending) return { orderId: pending.id, reused: true };
+		const visitorId =
+			cookieValue(headers.get("cookie"), analyticsCookieName) ??
+			`user-${session.user.id}`;
+		if (pending) {
+			await recordAnalyticsEvent({
+				organizationId: offer.organizationId,
+				productId: offer.productId,
+				userId: session.user.id,
+				eventType: "checkout_started",
+				visitorId,
+				source: "checkout",
+			});
+			return { orderId: pending.id, reused: true };
+		}
 		const id = crypto.randomUUID();
 		const fee = Math.round((offer.priceInSen * platformFeePercent) / 100);
 		await db.insert(schema.courseOrder).values({
@@ -279,6 +297,14 @@ export const createCheckout = createServerFn({ method: "POST" })
 			billingTypeSnapshot: offer.billingType,
 			billingIntervalSnapshot: offer.billingInterval,
 			expiresAt: new Date(Date.now() + checkoutLifetimeMs),
+		});
+		await recordAnalyticsEvent({
+			organizationId: offer.organizationId,
+			productId: offer.productId,
+			userId: session.user.id,
+			eventType: "checkout_started",
+			visitorId,
+			source: "checkout",
 		});
 		return { orderId: id, reused: false };
 	});

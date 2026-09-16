@@ -43,6 +43,13 @@
       "when": 1789381316437,
       "tag": "0005_majestic_miek",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789568321008,
+      "tag": "0006_mighty_colleen_wing",
+      "breakpoints": true
     }
   ]
 }

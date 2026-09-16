@@ -156,6 +156,38 @@ export const creatorProfile = sqliteTable("creator_profile", {
 		.notNull(),
 });
 
+export const analyticsEvent = sqliteTable(
+	"analytics_event",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		productId: text("product_id").references(() => product.id, {
+			onDelete: "cascade",
+		}),
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		eventType: text("event_type").notNull(),
+		visitorId: text("visitor_id").notNull(),
+		source: text("source").notNull(),
+		deduplicationKey: text("deduplication_key").notNull().unique(),
+		occurredAt: integer("occurred_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index("analyticsEvent_organization_date_idx").on(
+			table.organizationId,
+			table.occurredAt,
+		),
+		index("analyticsEvent_product_date_idx").on(
+			table.productId,
+			table.occurredAt,
+		),
+		index("analyticsEvent_type_date_idx").on(table.eventType, table.occurredAt),
+	],
+);
+
 export const member = sqliteTable(
 	"member",
 	{

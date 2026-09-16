@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeftIcon, StoreIcon } from "lucide-react";
-
+import { AnalyticsView } from "@/components/analytics-view";
 import { ProductCard } from "@/components/product-card";
 import { Button } from "@/components/ui/button";
 import { getPublicStorefront } from "@/lib/creator-commerce.functions";
@@ -22,6 +22,10 @@ function CreatorStorefront() {
 	const { profile, products } = Route.useLoaderData();
 	return (
 		<main className="min-h-svh bg-background">
+			<AnalyticsView
+				eventType="storefront_view"
+				slug={profile.organizationSlug}
+			/>
 			<header className="border-b">
 				<div className="mx-auto flex h-16 max-w-7xl items-center px-5">
 					<Button variant="ghost" render={<Link to="/courses" />}>

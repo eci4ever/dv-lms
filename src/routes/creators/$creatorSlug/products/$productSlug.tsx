@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeftIcon, CheckIcon, LoaderCircleIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-
+import { AnalyticsView } from "@/components/analytics-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,6 +50,11 @@ function PublicProduct() {
 	}
 	return (
 		<main className="min-h-svh bg-muted/20">
+			<AnalyticsView
+				eventType="product_view"
+				slug={product.slug}
+				creatorSlug={product.organizationSlug}
+			/>
 			<header className="border-b bg-background">
 				<div className="mx-auto flex h-16 max-w-7xl items-center px-5">
 					<Button
