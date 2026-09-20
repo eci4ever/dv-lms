@@ -354,6 +354,76 @@ export const lessonProgress = sqliteTable(
 	],
 );
 
+export const courseReview = sqliteTable(
+	"course_review",
+	{
+		id: text("id").primaryKey(),
+		courseId: text("course_id")
+			.notNull()
+			.references(() => course.id, { onDelete: "cascade" }),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		rating: integer("rating").notNull(),
+		content: text("content").notNull(),
+		accessSource: text("access_source").notNull(),
+		status: text("status").default("published").notNull(),
+		featuredAt: integer("featured_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("courseReview_course_user_unique").on(
+			table.courseId,
+			table.userId,
+		),
+		index("courseReview_course_status_idx").on(table.courseId, table.status),
+		index("courseReview_organization_idx").on(table.organizationId),
+		index("courseReview_featured_idx").on(table.featuredAt),
+	],
+);
+
+export const reviewReport = sqliteTable(
+	"review_report",
+	{
+		id: text("id").primaryKey(),
+		reviewId: text("review_id")
+			.notNull()
+			.references(() => courseReview.id, { onDelete: "cascade" }),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		reason: text("reason").notNull(),
+		status: text("status").default("pending").notNull(),
+		resolvedBy: text("resolved_by").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		resolvedAt: integer("resolved_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("reviewReport_review_organization_unique").on(
+			table.reviewId,
+			table.organizationId,
+		),
+		index("reviewReport_status_idx").on(table.status),
+	],
+);
+
 export const product = sqliteTable(
 	"product",
 	{
