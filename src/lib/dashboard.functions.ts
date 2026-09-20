@@ -4,6 +4,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
+import { expireMemberships } from "@/lib/access.server";
 import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
 
@@ -43,6 +44,11 @@ async function requireOwner() {
 	if (!role?.split(",").includes("owner"))
 		throw new Error("Organization owner access is required.");
 	return { organizationId, organizationName: organization.name };
+}
+async function requireSession() {
+	const session = await auth.api.getSession({ headers: getRequestHeaders() });
+	if (!session) throw new Error("Authentication required.");
+	return session;
 }
 function startOfUtcDay(date: Date) {
 	return new Date(
@@ -314,3 +320,124 @@ export const getCreatorDashboard = createServerFn({ method: "GET" })
 				: 0,
 		};
 	});
+
+export const getCustomerDashboard = createServerFn({ method: "GET" }).handler(
+	async () => {
+		const session = await requireSession();
+		await expireMemberships(session.user.id);
+		const now = new Date();
+		const [courses, memberships, purchases] = await Promise.all([
+			db
+				.select({
+					enrollmentId: schema.enrollment.id,
+					status: schema.enrollment.status,
+					slug: schema.course.slug,
+					title: schema.course.title,
+					thumbnailUrl: schema.course.thumbnailUrl,
+					organizationName: schema.organization.name,
+					firstLessonId: sql<string | null>`(
+						select l.id from lesson l
+						inner join course_section cs on l.section_id = cs.id
+						where cs.course_id = ${schema.course.id}
+						order by cs.position asc, l.position asc limit 1
+					)`,
+					totalLessons: sql<number>`count(distinct ${schema.lesson.id})`,
+					completedLessons: sql<number>`count(distinct case when ${schema.lessonProgress.completedAt} is not null then ${schema.lessonProgress.lessonId} end)`,
+					updatedAt: schema.enrollment.updatedAt,
+				})
+				.from(schema.enrollment)
+				.innerJoin(
+					schema.course,
+					eq(schema.enrollment.courseId, schema.course.id),
+				)
+				.innerJoin(
+					schema.organization,
+					eq(schema.course.organizationId, schema.organization.id),
+				)
+				.leftJoin(
+					schema.courseSection,
+					eq(schema.course.id, schema.courseSection.courseId),
+				)
+				.leftJoin(
+					schema.lesson,
+					eq(schema.courseSection.id, schema.lesson.sectionId),
+				)
+				.leftJoin(
+					schema.lessonProgress,
+					and(
+						eq(schema.lessonProgress.enrollmentId, schema.enrollment.id),
+						eq(schema.lessonProgress.lessonId, schema.lesson.id),
+					),
+				)
+				.where(
+					and(
+						eq(schema.enrollment.userId, session.user.id),
+						inArray(schema.enrollment.status, ["active", "completed"]),
+					),
+				)
+				.groupBy(schema.enrollment.id)
+				.orderBy(desc(schema.enrollment.updatedAt)),
+			db
+				.select({
+					id: schema.subscription.id,
+					status: schema.subscription.status,
+					productName: schema.product.name,
+					creatorName: schema.organization.name,
+					currentPeriodEnd: schema.subscription.currentPeriodEnd,
+					cancelAtPeriodEnd: schema.subscription.cancelAtPeriodEnd,
+				})
+				.from(schema.subscription)
+				.innerJoin(
+					schema.offer,
+					eq(schema.subscription.offerId, schema.offer.id),
+				)
+				.innerJoin(
+					schema.product,
+					eq(schema.offer.productId, schema.product.id),
+				)
+				.innerJoin(
+					schema.organization,
+					eq(schema.subscription.organizationId, schema.organization.id),
+				)
+				.where(
+					and(
+						eq(schema.subscription.buyerId, session.user.id),
+						inArray(schema.subscription.status, ["active", "cancelled"]),
+						gte(schema.subscription.currentPeriodEnd, now),
+					),
+				)
+				.orderBy(schema.subscription.currentPeriodEnd),
+			db
+				.select({
+					id: schema.courseOrder.id,
+					status: schema.courseOrder.status,
+					productName: schema.courseOrder.productNameSnapshot,
+					amountInSen: schema.courseOrder.grossInSen,
+					createdAt: schema.courseOrder.createdAt,
+				})
+				.from(schema.courseOrder)
+				.where(eq(schema.courseOrder.buyerId, session.user.id))
+				.orderBy(desc(schema.courseOrder.createdAt))
+				.limit(5),
+		]);
+		const totalLessons = courses.reduce(
+			(sum, item) => sum + Number(item.totalLessons),
+			0,
+		);
+		const completedLessons = courses.reduce(
+			(sum, item) => sum + Number(item.completedLessons),
+			0,
+		);
+		return {
+			courses: courses.slice(0, 3),
+			courseCount: courses.length,
+			totalLessons,
+			completedLessons,
+			overallProgress: totalLessons
+				? Math.round((completedLessons / totalLessons) * 100)
+				: 0,
+			memberships,
+			purchases,
+		};
+	},
+);

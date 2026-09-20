@@ -8,8 +8,12 @@ import {
 	ActivityIcon,
 	ArrowDownRightIcon,
 	ArrowUpRightIcon,
+	BookOpenIcon,
+	CalendarClockIcon,
 	CircleDollarSignIcon,
 	EyeIcon,
+	PlayIcon,
+	ReceiptTextIcon,
 	ShoppingCartIcon,
 	UsersIcon,
 } from "lucide-react";
@@ -48,7 +52,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDashboardSession } from "@/lib/auth.functions";
 import { formatCoursePrice } from "@/lib/course-types";
-import { getCreatorDashboard } from "@/lib/dashboard.functions";
+import {
+	getCreatorDashboard,
+	getCustomerDashboard,
+} from "@/lib/dashboard.functions";
 
 const allowedDays = [7, 30, 90, 365] as const;
 type Days = (typeof allowedDays)[number];
@@ -68,10 +75,13 @@ export const Route = createFileRoute("/dashboard")({
 		if (!data) throw redirect({ to: "/login" });
 		return data;
 	},
-	loader: ({ context, deps }) =>
+	loader: async ({ context, deps }) =>
 		context.isOrganizationOwner
-			? getCreatorDashboard({ data: { days: deps.days } })
-			: null,
+			? {
+					kind: "creator" as const,
+					data: await getCreatorDashboard({ data: { days: deps.days } }),
+				}
+			: { kind: "customer" as const, data: await getCustomerDashboard() },
 	pendingComponent: DashboardSkeleton,
 	component: Dashboard,
 });
@@ -102,7 +112,7 @@ function Change({ value }: { value: number }) {
 }
 function Dashboard() {
 	const context = Route.useRouteContext();
-	const analytics = Route.useLoaderData();
+	const dashboard = Route.useLoaderData();
 	const { days = 30 } = Route.useSearch();
 	const navigate = useNavigate({ from: "/dashboard" });
 	return (
@@ -125,16 +135,16 @@ function Dashboard() {
 					/>
 					<p className="text-sm font-medium">Dashboard</p>
 				</header>
-				{analytics ? (
+				{dashboard.kind === "creator" ? (
 					<CreatorDashboard
-						data={analytics}
+						data={dashboard.data}
 						days={days}
 						onDays={(next) => navigate({ search: { days: next } })}
 					/>
 				) : (
-					<CustomerPlaceholder
+					<CustomerDashboard
+						data={dashboard.data}
 						name={context.session.user.name}
-						email={context.session.user.email}
 					/>
 				)}
 			</SidebarInset>
@@ -471,24 +481,236 @@ function DashboardSkeleton() {
 		</div>
 	);
 }
-function CustomerPlaceholder({ name, email }: { name: string; email: string }) {
+function CustomerDashboard({
+	name,
+	data,
+}: {
+	name: string;
+	data: Awaited<ReturnType<typeof getCustomerDashboard>>;
+}) {
 	const firstName = name.split(/\s+/)[0] || name;
 	return (
-		<main className="flex flex-1 flex-col gap-6 p-6 sm:p-8">
-			<div>
-				<h1 className="text-2xl font-semibold tracking-tight">
-					Welcome, {firstName}
-				</h1>
-				<p className="mt-2 text-sm text-muted-foreground">
-					Continue learning and track your progress.
-				</p>
+		<main className="flex flex-1 p-4 sm:p-6 lg:p-8">
+			<div className="mx-auto w-full max-w-6xl space-y-6">
+				<div className="flex flex-wrap items-end justify-between gap-4">
+					<div>
+						<h1 className="text-2xl font-semibold tracking-tight">
+							Welcome, {firstName}
+						</h1>
+						<p className="mt-2 text-sm text-muted-foreground">
+							Continue learning and track your progress.
+						</p>
+					</div>
+					<Button variant="outline" render={<Link to="/courses" />}>
+						Explore marketplace
+					</Button>
+				</div>
+				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+					<CustomerMetric
+						label="Courses"
+						value={String(data.courseCount)}
+						icon={BookOpenIcon}
+					/>
+					<CustomerMetric
+						label="Lessons completed"
+						value={String(data.completedLessons)}
+						icon={PlayIcon}
+					/>
+					<CustomerMetric
+						label="Overall progress"
+						value={`${data.overallProgress}%`}
+						icon={ActivityIcon}
+					/>
+					<CustomerMetric
+						label="Active memberships"
+						value={String(data.memberships.length)}
+						icon={CalendarClockIcon}
+					/>
+				</div>
+				<div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+					<Card>
+						<CardHeader className="flex-row items-center justify-between">
+							<CardTitle>Continue learning</CardTitle>
+							<Button variant="ghost" size="sm" render={<Link to="/library" />}>
+								View library
+							</Button>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							{data.courses.length ? (
+								data.courses.map((course) => {
+									const total = Number(course.totalLessons);
+									const complete = Number(course.completedLessons);
+									const progress = total
+										? Math.round((complete / total) * 100)
+										: 0;
+									return (
+										<div
+											key={course.enrollmentId}
+											className="flex gap-4 border-b pb-4 last:border-0 last:pb-0"
+										>
+											<div className="hidden size-20 shrink-0 overflow-hidden rounded-lg bg-muted sm:block">
+												{course.thumbnailUrl ? (
+													<img
+														src={course.thumbnailUrl}
+														alt=""
+														className="size-full object-cover"
+													/>
+												) : (
+													<div className="grid size-full place-items-center">
+														<BookOpenIcon className="size-6 text-muted-foreground" />
+													</div>
+												)}
+											</div>
+											<div className="min-w-0 flex-1">
+												<p className="text-xs text-muted-foreground">
+													{course.organizationName}
+												</p>
+												<p className="truncate font-medium">{course.title}</p>
+												<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+													<div
+														className="h-full bg-primary"
+														style={{ width: `${progress}%` }}
+													/>
+												</div>
+												<p className="mt-1 text-xs text-muted-foreground">
+													{complete} of {total} lessons · {progress}%
+												</p>
+											</div>
+											{course.firstLessonId ? (
+												<Button
+													size="sm"
+													render={
+														<Link
+															to="/learning/$slug/$lessonId"
+															params={{
+																slug: course.slug,
+																lessonId: course.firstLessonId,
+															}}
+														/>
+													}
+												>
+													Continue
+												</Button>
+											) : null}
+										</div>
+									);
+								})
+							) : (
+								<EmptyCustomerState />
+							)}
+						</CardContent>
+					</Card>
+					<div className="space-y-6">
+						<Card>
+							<CardHeader className="flex-row items-center justify-between">
+								<CardTitle>Memberships</CardTitle>
+								<Button
+									variant="ghost"
+									size="sm"
+									render={<Link to="/memberships" />}
+								>
+									Manage
+								</Button>
+							</CardHeader>
+							<CardContent className="space-y-3">
+								{data.memberships.length ? (
+									data.memberships.slice(0, 3).map((membership) => (
+										<div key={membership.id} className="text-sm">
+											<p className="font-medium">{membership.productName}</p>
+											<p className="text-xs text-muted-foreground">
+												{membership.creatorName} · until{" "}
+												{formatDate(membership.currentPeriodEnd)}
+											</p>
+										</div>
+									))
+								) : (
+									<p className="text-sm text-muted-foreground">
+										No active memberships.
+									</p>
+								)}
+							</CardContent>
+						</Card>
+						<Card>
+							<CardHeader className="flex-row items-center justify-between">
+								<CardTitle>Recent purchases</CardTitle>
+								<Button
+									variant="ghost"
+									size="sm"
+									render={<Link to="/purchases" />}
+								>
+									View all
+								</Button>
+							</CardHeader>
+							<CardContent className="space-y-3">
+								{data.purchases.length ? (
+									data.purchases.slice(0, 3).map((purchase) => (
+										<div
+											key={purchase.id}
+											className="flex items-start justify-between gap-3 text-sm"
+										>
+											<div>
+												<p className="font-medium">
+													{purchase.productName ?? "Product"}
+												</p>
+												<p className="text-xs text-muted-foreground">
+													{formatDate(purchase.createdAt)}
+												</p>
+											</div>
+											<Badge variant="secondary" className="capitalize">
+												{purchase.status}
+											</Badge>
+										</div>
+									))
+								) : (
+									<p className="text-sm text-muted-foreground">
+										No purchases yet.
+									</p>
+								)}
+							</CardContent>
+						</Card>
+					</div>
+				</div>
 			</div>
-			<Card>
-				<CardContent className="p-6">
-					<p className="font-medium">Your account</p>
-					<p className="text-sm text-muted-foreground">{email}</p>
-				</CardContent>
-			</Card>
 		</main>
+	);
+}
+function CustomerMetric({
+	label,
+	value,
+	icon: Icon,
+}: {
+	label: string;
+	value: string;
+	icon: React.ComponentType<{ className?: string }>;
+}) {
+	return (
+		<Card>
+			<CardContent className="flex items-center justify-between p-5">
+				<div>
+					<p className="text-sm text-muted-foreground">{label}</p>
+					<p className="mt-1 text-2xl font-semibold">{value}</p>
+				</div>
+				<Icon className="size-5 text-muted-foreground" />
+			</CardContent>
+		</Card>
+	);
+}
+function EmptyCustomerState() {
+	return (
+		<div className="py-8 text-center">
+			<ReceiptTextIcon className="mx-auto size-9 text-muted-foreground" />
+			<p className="mt-3 font-medium">Your learning journey starts here</p>
+			<p className="mt-1 text-sm text-muted-foreground">
+				Choose a free or paid course from the marketplace.
+			</p>
+			<Button className="mt-4" render={<Link to="/courses" />}>
+				Explore courses
+			</Button>
+		</div>
+	);
+}
+function formatDate(value: Date) {
+	return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
+		value,
 	);
 }
