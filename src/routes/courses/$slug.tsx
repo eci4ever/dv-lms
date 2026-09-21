@@ -3,6 +3,7 @@ import {
 	Link,
 	notFound,
 	useNavigate,
+	useRouter,
 } from "@tanstack/react-router";
 import {
 	BookOpenCheckIcon,
@@ -13,13 +14,26 @@ import {
 	Layers3Icon,
 	LoaderCircleIcon,
 	PlayCircleIcon,
+	StarIcon,
+	Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { createCheckout } from "@/lib/commerce.functions";
 import {
@@ -32,15 +46,24 @@ import {
 	enrollInFreeCourse,
 	getEnrollmentState,
 } from "@/lib/learning.functions";
+import {
+	deleteCourseReview,
+	getMyCourseReview,
+	getPublicCourseReviews,
+	saveCourseReview,
+} from "@/lib/review.functions";
 
 export const Route = createFileRoute("/courses/$slug")({
 	loader: async ({ params }) => {
-		const [course, enrollmentState] = await Promise.all([
-			getPublicCourse({ data: { slug: params.slug } }),
-			getEnrollmentState({ data: { slug: params.slug } }),
-		]);
+		const course = await getPublicCourse({ data: { slug: params.slug } });
 		if (!course) throw notFound();
-		return { course, enrollmentState };
+		const [enrollmentState, reviewData, myReview] = await Promise.all([
+			getEnrollmentState({ data: { slug: params.slug } }),
+			getPublicCourseReviews({ data: { courseId: course.id } }),
+			getMyCourseReview({ data: { courseId: course.id } }),
+		]);
+		if (!reviewData) throw notFound();
+		return { course, enrollmentState, reviewData, myReview };
 	},
 	head: ({ loaderData }) => ({
 		meta: [
@@ -59,7 +82,8 @@ export const Route = createFileRoute("/courses/$slug")({
 });
 
 function PublicCourseDetail() {
-	const { course, enrollmentState } = Route.useLoaderData();
+	const { course, enrollmentState, reviewData, myReview } =
+		Route.useLoaderData();
 
 	return (
 		<main className="min-h-svh bg-background">
@@ -210,6 +234,11 @@ function PublicCourseDetail() {
 							))}
 						</div>
 					</section>
+					<CourseReviews
+						courseId={course.id}
+						data={reviewData}
+						myReview={myReview}
+					/>
 				</div>
 				<aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
 					<Card>
@@ -236,6 +265,216 @@ function PublicCourseDetail() {
 				</aside>
 			</div>
 		</main>
+	);
+}
+
+function Stars({ rating, size = "size-4" }: { rating: number; size?: string }) {
+	return (
+		<span
+			className="inline-flex gap-0.5"
+			role="img"
+			aria-label={`${rating} out of 5 stars`}
+		>
+			{[1, 2, 3, 4, 5].map((star) => (
+				<StarIcon
+					key={star}
+					className={`${size} ${star <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+				/>
+			))}
+		</span>
+	);
+}
+
+function CourseReviews({
+	courseId,
+	data,
+	myReview,
+}: {
+	courseId: string;
+	data: NonNullable<Awaited<ReturnType<typeof getPublicCourseReviews>>>;
+	myReview: Awaited<ReturnType<typeof getMyCourseReview>>;
+}) {
+	const router = useRouter();
+	const [rating, setRating] = useState(myReview.review?.rating ?? 5);
+	const [content, setContent] = useState(myReview.review?.content ?? "");
+	const [busy, setBusy] = useState(false);
+	async function save(event: React.FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		setBusy(true);
+		try {
+			await saveCourseReview({ data: { courseId, rating, content } });
+			toast.success(myReview.review ? "Review updated." : "Review published.");
+			await router.invalidate({ sync: true });
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Unable to save review.",
+			);
+		} finally {
+			setBusy(false);
+		}
+	}
+	async function remove() {
+		if (!myReview.review) return;
+		setBusy(true);
+		try {
+			await deleteCourseReview({ data: { id: myReview.review.id } });
+			toast.success("Review deleted.");
+			await router.invalidate({ sync: true });
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Unable to delete review.",
+			);
+		} finally {
+			setBusy(false);
+		}
+	}
+	return (
+		<section className="space-y-6">
+			<div>
+				<h2 className="text-xl font-semibold">Learner reviews</h2>
+				<p className="mt-1 text-sm text-muted-foreground">
+					Reviews from learners with verified course access.
+				</p>
+			</div>
+			<div className="grid gap-6 sm:grid-cols-[180px_1fr]">
+				<Card>
+					<CardContent className="space-y-3 p-5 text-center">
+						<p className="text-4xl font-semibold">{data.average.toFixed(1)}</p>
+						<Stars rating={Math.round(data.average)} />
+						<p className="text-xs text-muted-foreground">
+							{data.count} reviews
+						</p>
+						<div className="space-y-1.5 pt-2 text-xs">
+							{[5, 4, 3, 2, 1].map((star) => (
+								<div key={star} className="flex items-center gap-2">
+									<span className="w-4">{star}</span>
+									<div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+										<div
+											className="h-full bg-amber-400"
+											style={{
+												width: `${data.count ? (Number(data.distribution[star]) / data.count) * 100 : 0}%`,
+											}}
+										/>
+									</div>
+									<span className="w-5 text-right text-muted-foreground">
+										{Number(data.distribution[star])}
+									</span>
+								</div>
+							))}
+						</div>
+					</CardContent>
+				</Card>
+				{myReview.eligible ? (
+					<Card>
+						<CardHeader>
+							<CardTitle>
+								{myReview.review ? "Edit your review" : "Write a review"}
+							</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<form className="space-y-4" onSubmit={save}>
+								<div className="flex gap-1">
+									{[1, 2, 3, 4, 5].map((star) => (
+										<button
+											key={star}
+											type="button"
+											aria-label={`Rate ${star} stars`}
+											onClick={() => setRating(star)}
+										>
+											<StarIcon
+												className={`size-6 ${star <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+											/>
+										</button>
+									))}
+								</div>
+								<textarea
+									className="min-h-28 w-full rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+									minLength={20}
+									maxLength={2000}
+									required
+									value={content}
+									onChange={(event) => setContent(event.target.value)}
+									placeholder="Share what you learned and who this course is for."
+								/>
+								<div className="flex flex-wrap gap-2">
+									<Button type="submit" disabled={busy}>
+										{myReview.review ? "Update review" : "Publish review"}
+									</Button>
+									{myReview.review ? (
+										<Dialog>
+											<DialogTrigger
+												render={
+													<Button
+														type="button"
+														variant="outline"
+														disabled={busy}
+													/>
+												}
+											>
+												<Trash2Icon /> Delete
+											</DialogTrigger>
+											<DialogContent>
+												<DialogHeader>
+													<DialogTitle>Delete your review?</DialogTitle>
+													<DialogDescription>
+														This permanently removes your rating and review.
+													</DialogDescription>
+												</DialogHeader>
+												<DialogFooter>
+													<DialogClose render={<Button variant="outline" />}>
+														Cancel
+													</DialogClose>
+													<Button variant="destructive" onClick={remove}>
+														Delete review
+													</Button>
+												</DialogFooter>
+											</DialogContent>
+										</Dialog>
+									) : null}
+								</div>
+							</form>
+						</CardContent>
+					</Card>
+				) : null}
+			</div>
+			<div className="space-y-4">
+				{data.reviews.length ? (
+					data.reviews.map((review) => (
+						<Card key={review.id}>
+							<CardContent className="flex gap-4 p-5">
+								<Avatar>
+									<AvatarImage src={review.userImage ?? undefined} />
+									<AvatarFallback>
+										{review.userName.slice(0, 2).toUpperCase()}
+									</AvatarFallback>
+								</Avatar>
+								<div className="min-w-0 flex-1">
+									<div className="flex flex-wrap items-center gap-2">
+										<p className="font-medium">{review.userName}</p>
+										<Badge variant="secondary">Verified learner</Badge>
+									</div>
+									<div className="mt-1 flex items-center gap-2">
+										<Stars rating={review.rating} size="size-3.5" />
+										<span className="text-xs text-muted-foreground">
+											{new Intl.DateTimeFormat(undefined, {
+												dateStyle: "medium",
+											}).format(review.updatedAt)}
+										</span>
+									</div>
+									<p className="mt-3 whitespace-pre-line text-sm leading-6 text-muted-foreground">
+										{review.content}
+									</p>
+								</div>
+							</CardContent>
+						</Card>
+					))
+				) : (
+					<p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+						No reviews yet. Be the first learner to share your experience.
+					</p>
+				)}
+			</div>
+		</section>
 	);
 }
 

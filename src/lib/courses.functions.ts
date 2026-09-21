@@ -294,6 +294,14 @@ const courseCardSelection = {
 	creatorName: schema.user.name,
 	lessonCount: sql<number>`count(distinct ${schema.lesson.id})`,
 	durationMinutes: sql<number>`coalesce(sum(${schema.lesson.durationMinutes}), 0)`,
+	reviewCount: sql<number>`(
+		select count(*) from course_review cr
+		where cr.course_id = ${schema.course.id} and cr.status = 'published'
+	)`,
+	averageRating: sql<number>`coalesce((
+		select round(avg(cr.rating), 1) from course_review cr
+		where cr.course_id = ${schema.course.id} and cr.status = 'published'
+	), 0)`,
 };
 
 export const listWorkspaceCourses = createServerFn({ method: "GET" }).handler(

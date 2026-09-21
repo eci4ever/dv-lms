@@ -3,6 +3,7 @@ import {
 	BookOpenIcon,
 	Clock3Icon,
 	GraduationCapIcon,
+	StarIcon,
 	UsersRoundIcon,
 } from "lucide-react";
 
@@ -38,6 +39,8 @@ export interface CourseCardData {
 	creatorName: string;
 	lessonCount: number;
 	durationMinutes: number;
+	reviewCount: number;
+	averageRating: number;
 }
 
 export function CourseCard({ course }: { course: CourseCardData }) {
@@ -80,6 +83,13 @@ export function CourseCard({ course }: { course: CourseCardData }) {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="mt-auto space-y-2 pb-4 text-xs text-muted-foreground">
+					<div className="flex items-center gap-1.5">
+						<StarIcon className="size-3.5 fill-amber-400 text-amber-400" />
+						<span className="font-medium text-foreground">
+							{Number(course.averageRating).toFixed(1)}
+						</span>
+						<span>({Number(course.reviewCount)})</span>
+					</div>
 					<div className="flex items-center gap-1.5">
 						<GraduationCapIcon className="size-3.5" />
 						<span>{course.creatorName}</span>

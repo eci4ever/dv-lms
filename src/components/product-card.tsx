@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Layers3Icon } from "lucide-react";
+import { Layers3Icon, StarIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ interface ProductCardProps {
 		organizationSlug: string;
 		minimumPriceInSen: number | null;
 		courseCount: number;
+		reviewCount: number;
+		averageRating: number;
 	};
 }
 
@@ -47,6 +49,15 @@ export function ProductCard({ product }: ProductCardProps) {
 					<p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
 						{product.summary}
 					</p>
+					{product.type === "course" ? (
+						<p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+							<StarIcon className="size-3.5 fill-amber-400 text-amber-400" />
+							<span className="font-medium text-foreground">
+								{Number(product.averageRating).toFixed(1)}
+							</span>
+							<span>({Number(product.reviewCount)})</span>
+						</p>
+					) : null}
 				</div>
 				<div className="flex items-center justify-between gap-3">
 					<div>

@@ -509,6 +509,16 @@ const publicProductSelection = {
 		number | null
 	>`min(case when ${schema.offer.status} = 'active' then ${schema.offer.priceInSen} end)`,
 	courseCount: sql<number>`count(distinct ${schema.productCourse.courseId})`,
+	reviewCount: sql<number>`case when ${schema.product.type} = 'course' then (
+		select count(*) from course_review cr
+		inner join product_course rpc on rpc.course_id = cr.course_id
+		where rpc.product_id = ${schema.product.id} and cr.status = 'published'
+	) else 0 end`,
+	averageRating: sql<number>`case when ${schema.product.type} = 'course' then coalesce((
+		select round(avg(cr.rating), 1) from course_review cr
+		inner join product_course rpc on rpc.course_id = cr.course_id
+		where rpc.product_id = ${schema.product.id} and cr.status = 'published'
+	), 0) else 0 end`,
 };
 
 export const getPublicStorefront = createServerFn({ method: "GET" })
@@ -616,6 +626,14 @@ export const getPublicProduct = createServerFn({ method: "GET" })
 					title: schema.course.title,
 					summary: schema.course.summary,
 					thumbnailUrl: schema.course.thumbnailUrl,
+					reviewCount: sql<number>`(
+						select count(*) from course_review cr
+						where cr.course_id = ${schema.course.id} and cr.status = 'published'
+					)`,
+					averageRating: sql<number>`coalesce((
+						select round(avg(cr.rating), 1) from course_review cr
+						where cr.course_id = ${schema.course.id} and cr.status = 'published'
+					), 0)`,
 				})
 				.from(schema.productCourse)
 				.innerJoin(

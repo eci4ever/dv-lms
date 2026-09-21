@@ -1,5 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeftIcon, CheckIcon, LoaderCircleIcon } from "lucide-react";
+import {
+	ArrowLeftIcon,
+	CheckIcon,
+	LoaderCircleIcon,
+	StarIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AnalyticsView } from "@/components/analytics-view";
@@ -107,6 +112,13 @@ function PublicProduct() {
 									<p className="font-medium">{course.title}</p>
 									<p className="mt-1 text-sm text-muted-foreground">
 										{course.summary}
+									</p>
+									<p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+										<StarIcon className="size-3.5 fill-amber-400 text-amber-400" />
+										<span className="font-medium text-foreground">
+											{Number(course.averageRating).toFixed(1)}
+										</span>
+										<span>({Number(course.reviewCount)} reviews)</span>
 									</p>
 								</div>
 							</div>

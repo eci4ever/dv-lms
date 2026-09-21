@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { expireMemberships } from "@/lib/access.server";
@@ -146,6 +146,73 @@ export const getMyCourseReview = createServerFn({ method: "GET" })
 			)
 			.limit(1);
 		return { eligible, review: review ?? null };
+	});
+
+export const getPublicCourseReviews = createServerFn({ method: "GET" })
+	.validator((input: unknown) => ({
+		courseId: requiredText(record(input).courseId, "Course", 100),
+	}))
+	.handler(async ({ data }) => {
+		const [course] = await db
+			.select({ id: schema.course.id })
+			.from(schema.course)
+			.where(
+				and(
+					eq(schema.course.id, data.courseId),
+					eq(schema.course.status, "published"),
+				),
+			)
+			.limit(1);
+		if (!course) return null;
+		const [reviews, rows] = await Promise.all([
+			db
+				.select({
+					id: schema.courseReview.id,
+					rating: schema.courseReview.rating,
+					content: schema.courseReview.content,
+					accessSource: schema.courseReview.accessSource,
+					createdAt: schema.courseReview.createdAt,
+					updatedAt: schema.courseReview.updatedAt,
+					userName: schema.user.name,
+					userImage: schema.user.image,
+				})
+				.from(schema.courseReview)
+				.innerJoin(schema.user, eq(schema.courseReview.userId, schema.user.id))
+				.where(
+					and(
+						eq(schema.courseReview.courseId, data.courseId),
+						eq(schema.courseReview.status, "published"),
+					),
+				)
+				.orderBy(desc(schema.courseReview.updatedAt)),
+			db
+				.select({
+					rating: schema.courseReview.rating,
+					count: sql<number>`count(*)`,
+				})
+				.from(schema.courseReview)
+				.where(
+					and(
+						eq(schema.courseReview.courseId, data.courseId),
+						eq(schema.courseReview.status, "published"),
+					),
+				)
+				.groupBy(schema.courseReview.rating),
+		]);
+		const distribution = Object.fromEntries(
+			[1, 2, 3, 4, 5].map((rating) => [
+				rating,
+				Number(rows.find((row) => row.rating === rating)?.count ?? 0),
+			]),
+		);
+		const count = reviews.length;
+		const average = count
+			? Math.round(
+					(reviews.reduce((sum, review) => sum + review.rating, 0) / count) *
+						10,
+				) / 10
+			: 0;
+		return { average, count, distribution, reviews };
 	});
 
 export const saveCourseReview = createServerFn({ method: "POST" })
