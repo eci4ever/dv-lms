@@ -9,6 +9,7 @@ import {
 	LayoutDashboardIcon,
 	LibraryIcon,
 	type LucideIcon,
+	MessageSquareMoreIcon,
 	ScrollTextIcon,
 	Settings2Icon,
 	ShieldCheckIcon,
@@ -66,6 +67,8 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "orders"
 		| "purchases"
 		| "products"
+		| "reviews"
+		| "admin-reviews"
 		| "sales"
 		| "settings"
 		| "storefront"
@@ -217,6 +220,20 @@ export function AppSidebar({
 											<SidebarMenuItem>
 												<SidebarMenuButton
 													render={
+														<Link to="/workspace/reviews">
+															<MessageSquareMoreIcon />
+															<span>Reviews</span>
+														</Link>
+													}
+													isActive={activeItem === "reviews"}
+													tooltip="Reviews"
+												/>
+											</SidebarMenuItem>
+										) : null}
+										{isOrganizationOwner ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													render={
 														<Link to="/workspace/storefront">
 															<StoreIcon />
 															<span>Storefront</span>
@@ -310,6 +327,18 @@ export function AppSidebar({
 						<>
 							<SidebarGroup>
 								<SidebarMenu>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/reviews">
+													<MessageSquareMoreIcon />
+													<span>Reviews</span>
+												</Link>
+											}
+											isActive={activeItem === "admin-reviews"}
+											tooltip="Review moderation"
+										/>
+									</SidebarMenuItem>
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											type="button"

@@ -1,8 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeftIcon, StoreIcon } from "lucide-react";
+import { ArrowLeftIcon, StarIcon, StoreIcon } from "lucide-react";
 import { AnalyticsView } from "@/components/analytics-view";
 import { ProductCard } from "@/components/product-card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { getPublicStorefront } from "@/lib/creator-commerce.functions";
 
 export const Route = createFileRoute("/creators/$slug")({
@@ -19,7 +21,7 @@ export const Route = createFileRoute("/creators/$slug")({
 	component: CreatorStorefront,
 });
 function CreatorStorefront() {
-	const { profile, products } = Route.useLoaderData();
+	const { profile, products, testimonials } = Route.useLoaderData();
 	return (
 		<main className="min-h-svh bg-background">
 			<AnalyticsView
@@ -106,6 +108,51 @@ function CreatorStorefront() {
 					</div>
 				)}
 			</section>
+			{testimonials.length ? (
+				<section className="border-t bg-muted/30">
+					<div className="mx-auto max-w-7xl px-5 py-12">
+						<h2 className="text-2xl font-semibold">What learners say</h2>
+						<p className="mt-2 text-muted-foreground">
+							Verified reviews selected by {profile.displayName}.
+						</p>
+						<div className="mt-7 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+							{testimonials.map((review) => (
+								<Card key={review.id}>
+									<CardContent className="space-y-4 p-5">
+										<div
+											className="flex gap-0.5"
+											role="img"
+											aria-label={`${review.rating} out of 5 stars`}
+										>
+											{[1, 2, 3, 4, 5].map((star) => (
+												<StarIcon
+													key={star}
+													className={`size-4 ${star <= review.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+												/>
+											))}
+										</div>
+										<p className="text-sm leading-6">“{review.content}”</p>
+										<div className="flex items-center gap-3">
+											<Avatar className="size-8">
+												<AvatarImage src={review.userImage ?? undefined} />
+												<AvatarFallback>
+													{review.userName.slice(0, 2).toUpperCase()}
+												</AvatarFallback>
+											</Avatar>
+											<div>
+												<p className="text-sm font-medium">{review.userName}</p>
+												<p className="text-xs text-muted-foreground">
+													{review.courseTitle}
+												</p>
+											</div>
+										</div>
+									</CardContent>
+								</Card>
+							))}
+						</div>
+					</div>
+				</section>
+			) : null}
 		</main>
 	);
 }

@@ -22,6 +22,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
+import { Route as AdminReviewsRouteImport } from './routes/admin/reviews'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as CheckoutOrderIdRouteImport } from './routes/checkout/$orderId'
@@ -30,6 +31,7 @@ import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
 import { Route as CreatorsSlugRouteImport } from './routes/creators/$slug'
 import { Route as LearningIndexRouteImport } from './routes/learning/index'
 import { Route as WorkspaceCustomersRouteImport } from './routes/workspace/customers'
+import { Route as WorkspaceReviewsRouteImport } from './routes/workspace/reviews'
 import { Route as WorkspaceSalesRouteImport } from './routes/workspace/sales'
 import { Route as WorkspaceSettingsRouteImport } from './routes/workspace/settings'
 import { Route as WorkspaceStorefrontRouteImport } from './routes/workspace/storefront'
@@ -106,6 +108,11 @@ const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
   path: '/admin/organizations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminReviewsRoute = AdminReviewsRouteImport.update({
+  id: '/admin/reviews',
+  path: '/admin/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -144,6 +151,11 @@ const LearningIndexRoute = LearningIndexRouteImport.update({
 const WorkspaceCustomersRoute = WorkspaceCustomersRouteImport.update({
   id: '/workspace/customers',
   path: '/workspace/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceReviewsRoute = WorkspaceReviewsRouteImport.update({
+  id: '/workspace/reviews',
+  path: '/workspace/reviews',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceSalesRoute = WorkspaceSalesRouteImport.update({
@@ -214,12 +226,14 @@ export interface FileRoutesByFullPath {
   '/two-factor': typeof TwoFactorRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/reviews': typeof AdminReviewsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
+  '/workspace/reviews': typeof WorkspaceReviewsRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
@@ -247,12 +261,14 @@ export interface FileRoutesByTo {
   '/two-factor': typeof TwoFactorRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/reviews': typeof AdminReviewsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
+  '/workspace/reviews': typeof WorkspaceReviewsRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
@@ -281,12 +297,14 @@ export interface FileRoutesById {
   '/two-factor': typeof TwoFactorRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/reviews': typeof AdminReviewsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
+  '/workspace/reviews': typeof WorkspaceReviewsRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
@@ -316,12 +334,14 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/admin/orders'
     | '/admin/organizations'
+    | '/admin/reviews'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
     | '/workspace/customers'
+    | '/workspace/reviews'
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
@@ -349,12 +369,14 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/admin/orders'
     | '/admin/organizations'
+    | '/admin/reviews'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
     | '/workspace/customers'
+    | '/workspace/reviews'
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
@@ -382,12 +404,14 @@ export interface FileRouteTypes {
     | '/two-factor'
     | '/admin/orders'
     | '/admin/organizations'
+    | '/admin/reviews'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
     | '/workspace/customers'
+    | '/workspace/reviews'
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
@@ -416,12 +440,14 @@ export interface RootRouteChildren {
   TwoFactorRoute: typeof TwoFactorRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
+  AdminReviewsRoute: typeof AdminReviewsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   CheckoutOrderIdRoute: typeof CheckoutOrderIdRoute
   CoursesSlugRoute: typeof CoursesSlugRoute
   CreatorsSlugRoute: typeof CreatorsSlugRoute
   WorkspaceCustomersRoute: typeof WorkspaceCustomersRoute
+  WorkspaceReviewsRoute: typeof WorkspaceReviewsRoute
   WorkspaceSalesRoute: typeof WorkspaceSalesRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceStorefrontRoute: typeof WorkspaceStorefrontRoute
@@ -529,6 +555,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOrganizationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/reviews': {
+      id: '/admin/reviews'
+      path: '/admin/reviews'
+      fullPath: '/admin/reviews'
+      preLoaderRoute: typeof AdminReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/users': {
       id: '/admin/users'
       path: '/admin/users'
@@ -583,6 +616,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace/customers'
       fullPath: '/workspace/customers'
       preLoaderRoute: typeof WorkspaceCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/reviews': {
+      id: '/workspace/reviews'
+      path: '/workspace/reviews'
+      fullPath: '/workspace/reviews'
+      preLoaderRoute: typeof WorkspaceReviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/sales': {
@@ -672,12 +712,14 @@ const rootRouteChildren: RootRouteChildren = {
   TwoFactorRoute: TwoFactorRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
+  AdminReviewsRoute: AdminReviewsRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   CheckoutOrderIdRoute: CheckoutOrderIdRoute,
   CoursesSlugRoute: CoursesSlugRoute,
   CreatorsSlugRoute: CreatorsSlugRoute,
   WorkspaceCustomersRoute: WorkspaceCustomersRoute,
+  WorkspaceReviewsRoute: WorkspaceReviewsRoute,
   WorkspaceSalesRoute: WorkspaceSalesRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceStorefrontRoute: WorkspaceStorefrontRoute,

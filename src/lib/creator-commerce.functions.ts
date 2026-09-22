@@ -579,7 +579,32 @@ export const getPublicStorefront = createServerFn({ method: "GET" })
 				asc(schema.product.position),
 				desc(schema.product.publishedAt),
 			);
-		return { profile, products };
+		const testimonials = await db
+			.select({
+				id: schema.courseReview.id,
+				rating: schema.courseReview.rating,
+				content: schema.courseReview.content,
+				userName: schema.user.name,
+				userImage: schema.user.image,
+				courseTitle: schema.course.title,
+			})
+			.from(schema.courseReview)
+			.innerJoin(schema.user, eq(schema.courseReview.userId, schema.user.id))
+			.innerJoin(
+				schema.course,
+				eq(schema.courseReview.courseId, schema.course.id),
+			)
+			.where(
+				and(
+					eq(schema.courseReview.organizationId, profile.organizationId),
+					eq(schema.courseReview.status, "published"),
+					sql`${schema.courseReview.featuredAt} is not null`,
+					eq(schema.course.status, "published"),
+				),
+			)
+			.orderBy(desc(schema.courseReview.featuredAt))
+			.limit(6);
+		return { profile, products, testimonials };
 	});
 
 export const getPublicProduct = createServerFn({ method: "GET" })
