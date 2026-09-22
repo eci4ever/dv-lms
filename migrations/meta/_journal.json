@@ -57,6 +57,13 @@
       "when": 1789900617143,
       "tag": "0007_short_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790058808780,
+      "tag": "0008_flowery_proteus",
+      "breakpoints": true
     }
   ]
 }

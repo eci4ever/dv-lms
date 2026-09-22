@@ -18,12 +18,15 @@ import {
 } from "@/lib/analytics.server";
 import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
+import {
+	creatorStatus,
+	getPlatformSettings,
+	writeAudit,
+} from "@/lib/platform.server";
 
 const db = drizzle(env.DB, { schema });
 const customer = alias(schema.user, "customer");
 const checkoutLifetimeMs = 30 * 60 * 1_000;
-const refundWindowMs = 14 * 24 * 60 * 60 * 1_000;
-const platformFeePercent = 10;
 
 function record(value: unknown) {
 	if (!value || typeof value !== "object" || Array.isArray(value))
@@ -214,6 +217,9 @@ export const createCheckout = createServerFn({ method: "POST" })
 	.validator(validateOffer)
 	.handler(async ({ data }) => {
 		const { headers, session } = await requireSession();
+		const settings = await getPlatformSettings();
+		if (settings.maintenanceMode)
+			throw new Error("Checkout is temporarily unavailable.");
 		await expirePendingOrders(session.user.id);
 		const [offer] = await db
 			.select({
@@ -239,6 +245,8 @@ export const createCheckout = createServerFn({ method: "POST" })
 			offer.productStatus !== "published"
 		)
 			throw new Error("This offer is unavailable.");
+		if ((await creatorStatus(offer.organizationId)) !== "approved")
+			throw new Error("This creator is not available for new purchases.");
 		const courses = await offerCourses(offer.id);
 		if (
 			!courses.length ||
@@ -280,7 +288,9 @@ export const createCheckout = createServerFn({ method: "POST" })
 			return { orderId: pending.id, reused: true };
 		}
 		const id = crypto.randomUUID();
-		const fee = Math.round((offer.priceInSen * platformFeePercent) / 100);
+		const fee = Math.round(
+			(offer.priceInSen * settings.platformFeePercent) / 100,
+		);
 		await db.insert(schema.courseOrder).values({
 			id,
 			buyerId: session.user.id,
@@ -296,6 +306,8 @@ export const createCheckout = createServerFn({ method: "POST" })
 			offerNameSnapshot: offer.offerName,
 			billingTypeSnapshot: offer.billingType,
 			billingIntervalSnapshot: offer.billingInterval,
+			platformFeePercentSnapshot: settings.platformFeePercent,
+			refundWindowDaysSnapshot: settings.refundWindowDays,
 			expiresAt: new Date(Date.now() + checkoutLifetimeMs),
 		});
 		await recordAnalyticsEvent({
@@ -548,6 +560,9 @@ export const renewMockMembership = createServerFn({ method: "POST" })
 	.validator(validateRenewal)
 	.handler(async ({ data }) => {
 		const { session } = await requireSession();
+		const settings = await getPlatformSettings();
+		if (settings.maintenanceMode)
+			throw new Error("Membership renewal is temporarily unavailable.");
 		await expireMemberships(session.user.id);
 		const reference = `MOCK-RENEW-${data.renewalKey}`;
 		const [existing] = await db
@@ -589,6 +604,8 @@ export const renewMockMembership = createServerFn({ method: "POST" })
 		if (!item) throw new Error("Membership not found.");
 		if (item.offerStatus !== "active" || item.productStatus !== "published")
 			throw new Error("This membership offer is unavailable.");
+		if ((await creatorStatus(item.organizationId)) !== "approved")
+			throw new Error("This creator is not available for renewal.");
 		const now = new Date();
 		const start = item.currentPeriodEnd > now ? item.currentPeriodEnd : now;
 		const end = new Date(start);
@@ -597,7 +614,9 @@ export const renewMockMembership = createServerFn({ method: "POST" })
 		);
 		const courses = await offerCourses(item.offerId);
 		const id = crypto.randomUUID();
-		const fee = Math.round((item.priceInSen * platformFeePercent) / 100);
+		const fee = Math.round(
+			(item.priceInSen * settings.platformFeePercent) / 100,
+		);
 		await db.batch([
 			db.insert(schema.courseOrder).values({
 				id,
@@ -617,6 +636,8 @@ export const renewMockMembership = createServerFn({ method: "POST" })
 				offerNameSnapshot: item.offerName,
 				billingTypeSnapshot: "recurring",
 				billingIntervalSnapshot: item.billingInterval,
+				platformFeePercentSnapshot: settings.platformFeePercent,
+				refundWindowDaysSnapshot: settings.refundWindowDays,
 				expiresAt: now,
 				paidAt: now,
 			}),
@@ -659,6 +680,7 @@ export const requestRefund = createServerFn({ method: "POST" })
 				id: schema.courseOrder.id,
 				status: schema.courseOrder.status,
 				paidAt: schema.courseOrder.paidAt,
+				refundWindowDays: schema.courseOrder.refundWindowDaysSnapshot,
 			})
 			.from(schema.courseOrder)
 			.where(
@@ -670,8 +692,13 @@ export const requestRefund = createServerFn({ method: "POST" })
 			.limit(1);
 		if (!order || order.status !== "paid" || !order.paidAt)
 			throw new Error("Only your paid purchases can be refunded.");
-		if (Date.now() - order.paidAt.getTime() > refundWindowMs)
-			throw new Error("The 14-day refund window has ended.");
+		if (
+			Date.now() - order.paidAt.getTime() >
+			order.refundWindowDays * 24 * 60 * 60 * 1_000
+		)
+			throw new Error(
+				`The ${order.refundWindowDays}-day refund window has ended.`,
+			);
 		const [existing] = await db
 			.select({ id: schema.refundRequest.id })
 			.from(schema.refundRequest)
@@ -780,6 +807,7 @@ export const resolveRefund = createServerFn({ method: "POST" })
 				orderId: schema.courseOrder.id,
 				orderStatus: schema.courseOrder.status,
 				buyerId: schema.courseOrder.buyerId,
+				organizationId: schema.courseOrder.organizationId,
 				subscriptionId: schema.courseOrder.subscriptionId,
 			})
 			.from(schema.refundRequest)
@@ -812,6 +840,14 @@ export const resolveRefund = createServerFn({ method: "POST" })
 			);
 		if (data.decision === "rejected") {
 			await resolution;
+			await writeAudit({
+				actorId: session.user.id,
+				organizationId: request.organizationId,
+				action: "refund.rejected",
+				resourceType: "refund_request",
+				resourceId: request.id,
+				metadata: { orderId: request.orderId, note: data.note },
+			});
 			return { status: data.decision };
 		}
 		const orderEntitlements = await db
@@ -879,5 +915,13 @@ export const resolveRefund = createServerFn({ method: "POST" })
 			),
 			now,
 		);
+		await writeAudit({
+			actorId: session.user.id,
+			organizationId: request.organizationId,
+			action: "refund.approved",
+			resourceType: "refund_request",
+			resourceId: request.id,
+			metadata: { orderId: request.orderId, note: data.note },
+		});
 		return { status: data.decision };
 	});

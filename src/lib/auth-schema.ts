@@ -252,6 +252,8 @@ export const course = sqliteTable(
 		priceInSen: integer("price_in_sen").default(0).notNull(),
 		originalPriceInSen: integer("original_price_in_sen"),
 		status: text("status").default("draft").notNull(),
+		moderationStatus: text("moderation_status").default("active").notNull(),
+		moderationPreviousStatus: text("moderation_previous_status"),
 		publishedAt: integer("published_at", { mode: "timestamp_ms" }),
 		createdAt: integer("created_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
@@ -438,6 +440,8 @@ export const product = sqliteTable(
 		description: text("description").default("").notNull(),
 		imageUrl: text("image_url"),
 		status: text("status").default("draft").notNull(),
+		moderationStatus: text("moderation_status").default("active").notNull(),
+		moderationPreviousStatus: text("moderation_previous_status"),
 		featured: integer("featured", { mode: "boolean" }).default(false).notNull(),
 		position: integer("position").default(0).notNull(),
 		publishedAt: integer("published_at", { mode: "timestamp_ms" }),
@@ -581,6 +585,12 @@ export const courseOrder = sqliteTable(
 		offerNameSnapshot: text("offer_name_snapshot"),
 		billingTypeSnapshot: text("billing_type_snapshot"),
 		billingIntervalSnapshot: text("billing_interval_snapshot"),
+		platformFeePercentSnapshot: integer("platform_fee_percent_snapshot")
+			.default(10)
+			.notNull(),
+		refundWindowDaysSnapshot: integer("refund_window_days_snapshot")
+			.default(14)
+			.notNull(),
 		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
 		paidAt: integer("paid_at", { mode: "timestamp_ms" }),
 		refundedAt: integer("refunded_at", { mode: "timestamp_ms" }),
@@ -677,6 +687,137 @@ export const refundRequest = sqliteTable(
 	(table) => [
 		uniqueIndex("refundRequest_orderId_unique").on(table.orderId),
 		index("refundRequest_status_idx").on(table.status),
+	],
+);
+
+export const platformSetting = sqliteTable("platform_setting", {
+	id: text("id").primaryKey(),
+	platformFeePercent: integer("platform_fee_percent").default(10).notNull(),
+	refundWindowDays: integer("refund_window_days").default(14).notNull(),
+	creatorApplicationsOpen: integer("creator_applications_open", {
+		mode: "boolean",
+	})
+		.default(true)
+		.notNull(),
+	maintenanceMode: integer("maintenance_mode", { mode: "boolean" })
+		.default(false)
+		.notNull(),
+	updatedBy: text("updated_by").references(() => user.id, {
+		onDelete: "set null",
+	}),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+
+export const creatorApplication = sqliteTable(
+	"creator_application",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.unique()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		applicantId: text("applicant_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "restrict" }),
+		status: text("status").default("pending").notNull(),
+		note: text("note").default("").notNull(),
+		decisionReason: text("decision_reason"),
+		resolvedBy: text("resolved_by").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		resolvedAt: integer("resolved_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("creatorApplication_status_idx").on(table.status),
+		index("creatorApplication_organization_idx").on(table.organizationId),
+	],
+);
+
+export const platformCategory = sqliteTable(
+	"platform_category",
+	{
+		id: text("id").primaryKey(),
+		slug: text("slug").notNull().unique(),
+		name: text("name").notNull(),
+		description: text("description").default("").notNull(),
+		position: integer("position").default(0).notNull(),
+		featured: integer("featured", { mode: "boolean" }).default(false).notNull(),
+		active: integer("active", { mode: "boolean" }).default(true).notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("platformCategory_active_position_idx").on(
+			table.active,
+			table.position,
+		),
+	],
+);
+
+export const moderationAction = sqliteTable(
+	"moderation_action",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id").references(() => organization.id, {
+			onDelete: "set null",
+		}),
+		targetType: text("target_type").notNull(),
+		targetId: text("target_id").notNull(),
+		action: text("action").notNull(),
+		reason: text("reason").notNull(),
+		actorId: text("actor_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index("moderationAction_target_idx").on(table.targetType, table.targetId),
+		index("moderationAction_created_idx").on(table.createdAt),
+	],
+);
+
+export const auditLog = sqliteTable(
+	"audit_log",
+	{
+		id: text("id").primaryKey(),
+		actorId: text("actor_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		organizationId: text("organization_id").references(() => organization.id, {
+			onDelete: "set null",
+		}),
+		action: text("action").notNull(),
+		resourceType: text("resource_type").notNull(),
+		resourceId: text("resource_id"),
+		metadata: text("metadata").default("{}").notNull(),
+		impersonated: integer("impersonated", { mode: "boolean" })
+			.default(false)
+			.notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index("auditLog_actor_idx").on(table.actorId),
+		index("auditLog_action_idx").on(table.action),
+		index("auditLog_created_idx").on(table.createdAt),
 	],
 );
 
