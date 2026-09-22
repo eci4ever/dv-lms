@@ -12,8 +12,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { courseCategories, courseLevels } from "@/lib/course-types";
+import { courseLevels } from "@/lib/course-types";
 import { listPublicCourses } from "@/lib/courses.functions";
+import { listActiveCategories } from "@/lib/platform.functions";
 
 interface CatalogSearch {
 	category?: string;
@@ -40,20 +41,25 @@ export const Route = createFileRoute("/courses/")({
 		price: typeof search.price === "string" ? search.price : undefined,
 	}),
 	loaderDeps: ({ search }) => search,
-	loader: ({ deps }) =>
-		listPublicCourses({
-			data: {
-				query: deps.query ?? "",
-				category: deps.category ?? "",
-				level: deps.level ?? "",
-				price: deps.price ?? "",
-			},
-		}),
+	loader: async ({ deps }) => {
+		const [courses, categories] = await Promise.all([
+			listPublicCourses({
+				data: {
+					query: deps.query ?? "",
+					category: deps.category ?? "",
+					level: deps.level ?? "",
+					price: deps.price ?? "",
+				},
+			}),
+			listActiveCategories(),
+		]);
+		return { courses, categories };
+	},
 	component: CourseCatalog,
 });
 
 function CourseCatalog() {
-	const courses = Route.useLoaderData();
+	const { courses, categories } = Route.useLoaderData();
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const [query, setQuery] = useState(search.query ?? "");
@@ -143,9 +149,9 @@ function CourseCatalog() {
 								</SelectTrigger>
 								<SelectContent>
 									<SelectItem value="all">All categories</SelectItem>
-									{courseCategories.map((category) => (
-										<SelectItem key={category.value} value={category.value}>
-											{category.label}
+									{categories.map((category) => (
+										<SelectItem key={category.slug} value={category.slug}>
+											{category.name}
 										</SelectItem>
 									))}
 								</SelectContent>

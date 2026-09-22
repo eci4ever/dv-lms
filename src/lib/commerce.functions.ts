@@ -126,6 +126,7 @@ async function offerCourses(offerId: string) {
 			slug: schema.course.slug,
 			title: schema.course.title,
 			status: schema.course.status,
+			moderationStatus: schema.course.moderationStatus,
 		})
 		.from(schema.offer)
 		.innerJoin(schema.product, eq(schema.offer.productId, schema.product.id))
@@ -227,6 +228,7 @@ export const createCheckout = createServerFn({ method: "POST" })
 				productId: schema.product.id,
 				productName: schema.product.name,
 				productStatus: schema.product.status,
+				productModerationStatus: schema.product.moderationStatus,
 				organizationId: schema.product.organizationId,
 				offerName: schema.offer.name,
 				priceInSen: schema.offer.priceInSen,
@@ -242,7 +244,8 @@ export const createCheckout = createServerFn({ method: "POST" })
 		if (
 			!offer ||
 			offer.offerStatus !== "active" ||
-			offer.productStatus !== "published"
+			offer.productStatus !== "published" ||
+			offer.productModerationStatus !== "active"
 		)
 			throw new Error("This offer is unavailable.");
 		if ((await creatorStatus(offer.organizationId)) !== "approved")
@@ -250,7 +253,10 @@ export const createCheckout = createServerFn({ method: "POST" })
 		const courses = await offerCourses(offer.id);
 		if (
 			!courses.length ||
-			courses.some((course) => course.status !== "published")
+			courses.some(
+				(course) =>
+					course.status !== "published" || course.moderationStatus !== "active",
+			)
 		)
 			throw new Error("A course in this product is unavailable.");
 		if (offer.billingType === "one_time") {
@@ -376,10 +382,31 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 		if (order.status !== "pending" || order.expiresAt <= new Date())
 			throw new Error("This checkout has expired.");
 		if (!order.offerId) throw new Error("This order has no offer.");
+		if ((await creatorStatus(order.organizationId)) !== "approved")
+			throw new Error("This creator is not available for new purchases.");
+		if (order.productId) {
+			const [product] = await db
+				.select({
+					status: schema.product.status,
+					moderationStatus: schema.product.moderationStatus,
+				})
+				.from(schema.product)
+				.where(eq(schema.product.id, order.productId))
+				.limit(1);
+			if (
+				!product ||
+				product.status !== "published" ||
+				product.moderationStatus !== "active"
+			)
+				throw new Error("This product is unavailable.");
+		}
 		const courses = await offerCourses(order.offerId);
 		if (
 			!courses.length ||
-			courses.some((course) => course.status !== "published")
+			courses.some(
+				(course) =>
+					course.status !== "published" || course.moderationStatus !== "active",
+			)
 		)
 			throw new Error("A course in this product is unavailable.");
 		const now = new Date();
@@ -585,6 +612,7 @@ export const renewMockMembership = createServerFn({ method: "POST" })
 				productId: schema.product.id,
 				productName: schema.product.name,
 				productStatus: schema.product.status,
+				productModerationStatus: schema.product.moderationStatus,
 				offerName: schema.offer.name,
 				offerStatus: schema.offer.status,
 				priceInSen: schema.offer.priceInSen,
@@ -602,7 +630,11 @@ export const renewMockMembership = createServerFn({ method: "POST" })
 			)
 			.limit(1);
 		if (!item) throw new Error("Membership not found.");
-		if (item.offerStatus !== "active" || item.productStatus !== "published")
+		if (
+			item.offerStatus !== "active" ||
+			item.productStatus !== "published" ||
+			item.productModerationStatus !== "active"
+		)
 			throw new Error("This membership offer is unavailable.");
 		if ((await creatorStatus(item.organizationId)) !== "approved")
 			throw new Error("This creator is not available for renewal.");

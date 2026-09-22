@@ -65,6 +65,7 @@ export async function publishedTrackingTarget(
 				and(
 					eq(schema.organization.slug, slug),
 					eq(schema.creatorProfile.status, "published"),
+					eq(schema.creatorProfile.moderationStatus, "active"),
 					eq(schema.creatorApplication.status, "approved"),
 				),
 			)

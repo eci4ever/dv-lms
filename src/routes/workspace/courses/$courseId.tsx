@@ -57,7 +57,6 @@ import {
 	type CourseCategory,
 	type CourseLevel,
 	type CourseSectionInput,
-	courseCategories,
 	courseLevels,
 	formatCoursePrice,
 } from "@/lib/course-types";
@@ -68,6 +67,7 @@ import {
 	restoreCourse,
 	saveCourse,
 } from "@/lib/courses.functions";
+import { listActiveCategories } from "@/lib/platform.functions";
 
 export const Route = createFileRoute("/workspace/courses/$courseId")({
 	head: () => ({ meta: [{ title: "Edit Course | DV LMS" }] }),
@@ -75,8 +75,11 @@ export const Route = createFileRoute("/workspace/courses/$courseId")({
 		const dashboard = await getDashboardSession();
 		if (!dashboard) throw redirect({ to: "/login" });
 		if (!dashboard.isOrganizationOwner) throw redirect({ to: "/dashboard" });
-		const course = await getWorkspaceCourse({ data: { id: params.courseId } });
-		return { ...dashboard, initialCourse: course };
+		const [course, activeCategories] = await Promise.all([
+			getWorkspaceCourse({ data: { id: params.courseId } }),
+			listActiveCategories(),
+		]);
+		return { ...dashboard, initialCourse: course, activeCategories };
 	},
 	component: CourseEditor,
 });
@@ -431,9 +434,9 @@ function CourseEditor() {
 														<SelectValue />
 													</SelectTrigger>
 													<SelectContent>
-														{courseCategories.map((item) => (
-															<SelectItem key={item.value} value={item.value}>
-																{item.label}
+														{context.activeCategories.map((item) => (
+															<SelectItem key={item.slug} value={item.slug}>
+																{item.name}
 															</SelectItem>
 														))}
 													</SelectContent>

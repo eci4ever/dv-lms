@@ -18,7 +18,7 @@ export const courseLevels = [
 
 export const courseStatuses = ["draft", "published", "archived"] as const;
 
-export type CourseCategory = (typeof courseCategories)[number]["value"];
+export type CourseCategory = string;
 export type CourseLevel = (typeof courseLevels)[number]["value"];
 export type CourseStatus = (typeof courseStatuses)[number];
 

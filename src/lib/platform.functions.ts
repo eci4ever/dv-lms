@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, asc, desc, eq, like, or } from "drizzle-orm";
+import { and, asc, desc, eq, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { auth } from "@/lib/auth";
@@ -267,6 +267,7 @@ export const listActiveCategories = createServerFn({ method: "GET" }).handler(
 				name: schema.platformCategory.name,
 				description: schema.platformCategory.description,
 				featured: schema.platformCategory.featured,
+				courseCount: sql<number>`(select count(*) from course c inner join creator_application ca on ca.organization_id = c.organization_id where c.category = ${schema.platformCategory.slug} and c.status = 'published' and c.moderation_status = 'active' and ca.status = 'approved')`,
 			})
 			.from(schema.platformCategory)
 			.where(eq(schema.platformCategory.active, true))
@@ -275,3 +276,262 @@ export const listActiveCategories = createServerFn({ method: "GET" }).handler(
 				asc(schema.platformCategory.name),
 			),
 );
+
+export const listAdminContent = createServerFn({ method: "GET" }).handler(
+	async () => {
+		await adminContext();
+		const [courses, products, storefronts] = await Promise.all([
+			db
+				.select({
+					id: schema.course.id,
+					name: schema.course.title,
+					slug: schema.course.slug,
+					status: schema.course.status,
+					moderationStatus: schema.course.moderationStatus,
+					organizationId: schema.organization.id,
+					organizationName: schema.organization.name,
+					updatedAt: schema.course.updatedAt,
+				})
+				.from(schema.course)
+				.innerJoin(
+					schema.organization,
+					eq(schema.course.organizationId, schema.organization.id),
+				)
+				.orderBy(desc(schema.course.updatedAt)),
+			db
+				.select({
+					id: schema.product.id,
+					name: schema.product.name,
+					slug: schema.product.slug,
+					status: schema.product.status,
+					moderationStatus: schema.product.moderationStatus,
+					organizationId: schema.organization.id,
+					organizationName: schema.organization.name,
+					updatedAt: schema.product.updatedAt,
+				})
+				.from(schema.product)
+				.innerJoin(
+					schema.organization,
+					eq(schema.product.organizationId, schema.organization.id),
+				)
+				.orderBy(desc(schema.product.updatedAt)),
+			db
+				.select({
+					id: schema.creatorProfile.id,
+					name: schema.creatorProfile.displayName,
+					slug: schema.organization.slug,
+					status: schema.creatorProfile.status,
+					moderationStatus: schema.creatorProfile.moderationStatus,
+					organizationId: schema.organization.id,
+					organizationName: schema.organization.name,
+					updatedAt: schema.creatorProfile.updatedAt,
+				})
+				.from(schema.creatorProfile)
+				.innerJoin(
+					schema.organization,
+					eq(schema.creatorProfile.organizationId, schema.organization.id),
+				)
+				.orderBy(desc(schema.creatorProfile.updatedAt)),
+		]);
+		return {
+			items: [
+				...storefronts.map((item) => ({
+					...item,
+					type: "storefront" as const,
+				})),
+				...courses.map((item) => ({ ...item, type: "course" as const })),
+				...products.map((item) => ({ ...item, type: "product" as const })),
+			].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+		};
+	},
+);
+
+export const moderateContent = createServerFn({ method: "POST" })
+	.validator((input: unknown) => {
+		const values = object(input);
+		const type = String(values.type);
+		const action = String(values.action);
+		if (!["course", "product", "storefront"].includes(type))
+			throw new Error("Invalid content type.");
+		if (!["unlist", "suspend", "restore"].includes(action))
+			throw new Error("Invalid moderation action.");
+		return {
+			id: text(values.id, "Content", 120),
+			type: type as "course" | "product" | "storefront",
+			action: action as "unlist" | "suspend" | "restore",
+			reason: text(values.reason, "Reason", 1000),
+		};
+	})
+	.handler(async ({ data }) => {
+		const { session } = await adminContext();
+		const table =
+			data.type === "course"
+				? schema.course
+				: data.type === "product"
+					? schema.product
+					: schema.creatorProfile;
+		const [item] = await db
+			.select({
+				id: table.id,
+				organizationId: table.organizationId,
+				status: table.status,
+				moderationStatus: table.moderationStatus,
+				previousStatus: table.moderationPreviousStatus,
+			})
+			.from(table)
+			.where(eq(table.id, data.id))
+			.limit(1);
+		if (!item) throw new Error("Content not found.");
+		if (data.action === "restore" && item.moderationStatus === "active")
+			throw new Error("Content is not moderated.");
+		if (data.action !== "restore" && item.moderationStatus !== "active")
+			throw new Error("Content is already moderated.");
+		const now = new Date();
+		await db
+			.update(table)
+			.set(
+				data.action === "restore"
+					? {
+							status: item.previousStatus ?? "draft",
+							moderationStatus: "active",
+							moderationPreviousStatus: null,
+							updatedAt: now,
+						}
+					: {
+							status: "draft",
+							moderationStatus: data.action,
+							moderationPreviousStatus: item.status,
+							updatedAt: now,
+						},
+			)
+			.where(eq(table.id, item.id));
+		await db.insert(schema.moderationAction).values({
+			id: crypto.randomUUID(),
+			organizationId: item.organizationId,
+			targetType: data.type,
+			targetId: item.id,
+			action: data.action,
+			reason: data.reason,
+			actorId: session.user.id,
+		});
+		await writeAudit({
+			actorId: session.user.id,
+			organizationId: item.organizationId,
+			action: `content.${data.action}`,
+			resourceType: data.type,
+			resourceId: item.id,
+			metadata: { reason: data.reason, previousStatus: item.status },
+		});
+		return {
+			status:
+				data.action === "restore" ? (item.previousStatus ?? "draft") : "draft",
+			moderationStatus: data.action === "restore" ? "active" : data.action,
+		};
+	});
+
+export const listAdminCategories = createServerFn({ method: "GET" }).handler(
+	async () => {
+		await adminContext();
+		return db
+			.select()
+			.from(schema.platformCategory)
+			.orderBy(
+				asc(schema.platformCategory.position),
+				asc(schema.platformCategory.name),
+			);
+	},
+);
+
+export const savePlatformCategory = createServerFn({ method: "POST" })
+	.validator((input: unknown) => {
+		const values = object(input);
+		const name = text(values.name, "Name", 80);
+		const slug = text(values.slug, "Slug", 80)
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, "-")
+			.replace(/^-|-$/g, "");
+		return {
+			id: typeof values.id === "string" ? values.id : "",
+			name,
+			slug,
+			description:
+				typeof values.description === "string"
+					? values.description.trim().slice(0, 500)
+					: "",
+			featured: values.featured === true,
+			active: values.active !== false,
+		};
+	})
+	.handler(async ({ data }) => {
+		const { session } = await adminContext();
+		const id = data.id || crypto.randomUUID();
+		const [count] = await db
+			.select({ value: sql<number>`count(*)` })
+			.from(schema.platformCategory);
+		await db
+			.insert(schema.platformCategory)
+			.values({ ...data, id, position: Number(count.value) })
+			.onConflictDoUpdate({
+				target: schema.platformCategory.id,
+				set: {
+					name: data.name,
+					slug: data.slug,
+					description: data.description,
+					featured: data.featured,
+					active: data.active,
+					updatedAt: new Date(),
+				},
+			});
+		await writeAudit({
+			actorId: session.user.id,
+			action: data.id ? "category.updated" : "category.created",
+			resourceType: "platform_category",
+			resourceId: id,
+			metadata: data,
+		});
+		return { id };
+	});
+
+export const movePlatformCategory = createServerFn({ method: "POST" })
+	.validator((input: unknown) => {
+		const values = object(input);
+		const direction = String(values.direction);
+		if (!["up", "down"].includes(direction))
+			throw new Error("Invalid direction.");
+		return {
+			id: text(values.id, "Category", 120),
+			direction: direction as "up" | "down",
+		};
+	})
+	.handler(async ({ data }) => {
+		const { session } = await adminContext();
+		const categories = await db
+			.select({
+				id: schema.platformCategory.id,
+				position: schema.platformCategory.position,
+			})
+			.from(schema.platformCategory)
+			.orderBy(asc(schema.platformCategory.position));
+		const index = categories.findIndex((item) => item.id === data.id);
+		const swapIndex = data.direction === "up" ? index - 1 : index + 1;
+		if (index < 0 || swapIndex < 0 || swapIndex >= categories.length)
+			return { moved: false };
+		await db.batch([
+			db
+				.update(schema.platformCategory)
+				.set({ position: categories[swapIndex].position })
+				.where(eq(schema.platformCategory.id, categories[index].id)),
+			db
+				.update(schema.platformCategory)
+				.set({ position: categories[index].position })
+				.where(eq(schema.platformCategory.id, categories[swapIndex].id)),
+		]);
+		await writeAudit({
+			actorId: session.user.id,
+			action: "category.moved",
+			resourceType: "platform_category",
+			resourceId: data.id,
+			metadata: { direction: data.direction },
+		});
+		return { moved: true };
+	});

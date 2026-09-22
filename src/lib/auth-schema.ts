@@ -147,6 +147,8 @@ export const creatorProfile = sqliteTable("creator_profile", {
 	githubUrl: text("github_url"),
 	twitterUrl: text("twitter_url"),
 	status: text("status").default("draft").notNull(),
+	moderationStatus: text("moderation_status").default("active").notNull(),
+	moderationPreviousStatus: text("moderation_previous_status"),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 		.notNull(),

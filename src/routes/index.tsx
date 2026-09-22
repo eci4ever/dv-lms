@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { getSession } from "@/lib/auth.functions";
 import { listFeaturedCourses } from "@/lib/courses.functions";
+import { listActiveCategories } from "@/lib/platform.functions";
 
 export const Route = createFileRoute("/")({
 	head: () => ({
@@ -49,49 +50,26 @@ export const Route = createFileRoute("/")({
 		],
 	}),
 	loader: async () => {
-		const [featuredCourses, hasSession] = await Promise.all([
+		const [featuredCourses, hasSession, categories] = await Promise.all([
 			listFeaturedCourses(),
 			getSession(),
+			listActiveCategories(),
 		]);
-		return { featuredCourses, hasSession };
+		return { featuredCourses, hasSession, categories };
 	},
 	component: Home,
 });
 
-const categories: Array<{
-	name: string;
-	description: string;
-	icon: LucideIcon;
-}> = [
-	{ name: "Development", description: "1,240 courses", icon: Code2Icon },
-	{ name: "Design", description: "860 courses", icon: PaletteIcon },
-	{
-		name: "Business",
-		description: "980 courses",
-		icon: BriefcaseBusinessIcon,
-	},
-	{
-		name: "Data & Analytics",
-		description: "620 courses",
-		icon: BarChart3Icon,
-	},
-	{
-		name: "IT & Software",
-		description: "740 courses",
-		icon: Laptop2Icon,
-	},
-	{
-		name: "Health & Wellness",
-		description: "430 courses",
-		icon: HeartPulseIcon,
-	},
-	{ name: "Languages", description: "510 courses", icon: LanguagesIcon },
-	{
-		name: "Personal Growth",
-		description: "390 courses",
-		icon: TrendingUpIcon,
-	},
-];
+const categoryIcons: Record<string, LucideIcon> = {
+	development: Code2Icon,
+	design: PaletteIcon,
+	business: BriefcaseBusinessIcon,
+	"data-analytics": BarChart3Icon,
+	"it-software": Laptop2Icon,
+	"health-wellness": HeartPulseIcon,
+	languages: LanguagesIcon,
+	"personal-growth": TrendingUpIcon,
+};
 
 function Logo() {
 	return (
@@ -133,7 +111,7 @@ function SectionHeading({
 }
 
 function Home() {
-	const { featuredCourses, hasSession } = Route.useLoaderData();
+	const { featuredCourses, hasSession, categories } = Route.useLoaderData();
 	return (
 		<main
 			id="top"
@@ -420,11 +398,11 @@ function Home() {
 
 					<div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 						{categories.map((category) => {
-							const Icon = category.icon;
+							const Icon = categoryIcons[category.slug] ?? GraduationCapIcon;
 							return (
 								<a
 									key={category.name}
-									href="#courses"
+									href={`/courses?category=${category.slug}`}
 									className="group flex items-center gap-4 rounded-xl border bg-background p-4 transition-all hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-md"
 								>
 									<span className="grid size-11 shrink-0 place-items-center rounded-lg bg-muted transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
@@ -435,7 +413,8 @@ function Home() {
 											{category.name}
 										</span>
 										<span className="mt-0.5 block text-xs text-muted-foreground">
-											{category.description}
+											{category.courseCount}{" "}
+											{category.courseCount === 1 ? "course" : "courses"}
 										</span>
 									</span>
 									<ChevronRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />

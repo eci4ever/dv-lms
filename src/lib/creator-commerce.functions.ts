@@ -281,6 +281,10 @@ export const setStorefrontStatus = createServerFn({ method: "POST" })
 			.where(eq(schema.creatorProfile.organizationId, activeOrganizationId))
 			.limit(1);
 		if (!profile) throw new Error("Save the storefront first.");
+		if (data.status === "published" && profile.moderationStatus !== "active")
+			throw new Error(
+				"Platform moderation must restore this storefront before publishing.",
+			);
 		if (data.status === "published" && (!profile.headline || !profile.bio)) {
 			throw new Error("Add a headline and bio before publishing.");
 		}
@@ -463,6 +467,10 @@ export const setProductStatus = createServerFn({ method: "POST" })
 		const { product } = await ownedProduct(data.id);
 		if (data.status === "published")
 			await requireApprovedCreator(product.organizationId);
+		if (data.status === "published" && product.moderationStatus !== "active")
+			throw new Error(
+				"Platform moderation must restore this product before publishing.",
+			);
 		const allowed =
 			(product.status === "draft" && data.status === "published") ||
 			(product.status === "published" && data.status === "archived") ||
@@ -563,6 +571,7 @@ export const getPublicStorefront = createServerFn({ method: "GET" })
 				and(
 					eq(schema.organization.slug, data.slug),
 					eq(schema.creatorProfile.status, "published"),
+					eq(schema.creatorProfile.moderationStatus, "active"),
 					eq(schema.creatorApplication.status, "approved"),
 				),
 			)

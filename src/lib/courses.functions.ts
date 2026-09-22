@@ -11,7 +11,6 @@ import {
 	type CourseEditorInput,
 	type CourseLevel,
 	type CourseSectionInput,
-	courseCategories,
 	courseLevels,
 } from "@/lib/course-types";
 import { requireApprovedCreator } from "@/lib/platform.server";
@@ -55,7 +54,7 @@ function optionalHttpsUrl(value: unknown, label: string) {
 }
 
 function isCategory(value: string): value is CourseCategory {
-	return courseCategories.some((category) => category.value === value);
+	return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
 }
 
 function isLevel(value: string): value is CourseLevel {
@@ -382,7 +381,20 @@ export const getWorkspaceCourse = createServerFn({ method: "GET" })
 export const saveCourse = createServerFn({ method: "POST" })
 	.validator(validateEditorInput)
 	.handler(async ({ data }) => {
-		await requireOwnedCourse(data.id);
+		const { course } = await requireOwnedCourse(data.id);
+		if (data.category !== course.category) {
+			const [category] = await db
+				.select({ id: schema.platformCategory.id })
+				.from(schema.platformCategory)
+				.where(
+					and(
+						eq(schema.platformCategory.slug, data.category),
+						eq(schema.platformCategory.active, true),
+					),
+				)
+				.limit(1);
+			if (!category) throw new Error("Select an active category.");
+		}
 		const slug = await uniqueSlug(data.slug, data.id);
 		await db
 			.update(schema.course)
@@ -433,6 +445,10 @@ export const publishCourse = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		const { course } = await requireOwnedCourse(data.id);
 		await requireApprovedCreator(course.organizationId);
+		if (course.moderationStatus !== "active")
+			throw new Error(
+				"Platform moderation must restore this course before publishing.",
+			);
 		if (course.status !== "draft")
 			throw new Error("Only draft courses can be published.");
 		if (!course.summary || !course.description || !course.thumbnailUrl) {
