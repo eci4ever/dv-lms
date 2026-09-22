@@ -13,6 +13,7 @@ import {
 	type ProductType,
 	productTypes,
 } from "@/lib/creator-commerce-types";
+import { requireApprovedCreator } from "@/lib/platform.server";
 
 const db = drizzle(env.DB, { schema });
 
@@ -272,6 +273,8 @@ export const setStorefrontStatus = createServerFn({ method: "POST" })
 	})
 	.handler(async ({ data }) => {
 		const { activeOrganizationId } = await ownerContext();
+		if (data.status === "published")
+			await requireApprovedCreator(activeOrganizationId);
 		const [profile] = await db
 			.select()
 			.from(schema.creatorProfile)
@@ -458,6 +461,8 @@ export const setProductStatus = createServerFn({ method: "POST" })
 	})
 	.handler(async ({ data }) => {
 		const { product } = await ownedProduct(data.id);
+		if (data.status === "published")
+			await requireApprovedCreator(product.organizationId);
 		const allowed =
 			(product.status === "draft" && data.status === "published") ||
 			(product.status === "published" && data.status === "archived") ||
@@ -547,10 +552,18 @@ export const getPublicStorefront = createServerFn({ method: "GET" })
 				schema.organization,
 				eq(schema.creatorProfile.organizationId, schema.organization.id),
 			)
+			.innerJoin(
+				schema.creatorApplication,
+				eq(
+					schema.creatorProfile.organizationId,
+					schema.creatorApplication.organizationId,
+				),
+			)
 			.where(
 				and(
 					eq(schema.organization.slug, data.slug),
 					eq(schema.creatorProfile.status, "published"),
+					eq(schema.creatorApplication.status, "approved"),
 				),
 			)
 			.limit(1);
@@ -571,6 +584,7 @@ export const getPublicStorefront = createServerFn({ method: "GET" })
 				and(
 					eq(schema.product.organizationId, profile.organizationId),
 					eq(schema.product.status, "published"),
+					eq(schema.product.moderationStatus, "active"),
 				),
 			)
 			.groupBy(schema.product.id)
@@ -627,6 +641,10 @@ export const getPublicProduct = createServerFn({ method: "GET" })
 				schema.creatorProfile,
 				eq(schema.organization.id, schema.creatorProfile.organizationId),
 			)
+			.innerJoin(
+				schema.creatorApplication,
+				eq(schema.organization.id, schema.creatorApplication.organizationId),
+			)
 			.leftJoin(
 				schema.productCourse,
 				eq(schema.product.id, schema.productCourse.productId),
@@ -637,7 +655,9 @@ export const getPublicProduct = createServerFn({ method: "GET" })
 					eq(schema.organization.slug, data.creatorSlug),
 					eq(schema.product.slug, data.productSlug),
 					eq(schema.product.status, "published"),
+					eq(schema.product.moderationStatus, "active"),
 					eq(schema.creatorProfile.status, "published"),
+					eq(schema.creatorApplication.status, "approved"),
 				),
 			)
 			.groupBy(schema.product.id)

@@ -20,6 +20,7 @@ import { Route as PurchasesRouteImport } from './routes/purchases'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
+import { Route as AdminCreatorsRouteImport } from './routes/admin/creators'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
 import { Route as AdminReviewsRouteImport } from './routes/admin/reviews'
@@ -96,6 +97,11 @@ const SignupRoute = SignupRouteImport.update({
 const TwoFactorRoute = TwoFactorRouteImport.update({
   id: '/two-factor',
   path: '/two-factor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCreatorsRoute = AdminCreatorsRouteImport.update({
+  id: '/admin/creators',
+  path: '/admin/creators',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminOrdersRoute = AdminOrdersRouteImport.update({
@@ -224,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/reviews': typeof AdminReviewsRoute
@@ -259,6 +266,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/reviews': typeof AdminReviewsRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/reviews': typeof AdminReviewsRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/reviews'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/reviews'
@@ -402,6 +413,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/reviews'
@@ -438,6 +450,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TwoFactorRoute: typeof TwoFactorRoute
+  AdminCreatorsRoute: typeof AdminCreatorsRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
@@ -539,6 +552,13 @@ declare module '@tanstack/react-router' {
       path: '/two-factor'
       fullPath: '/two-factor'
       preLoaderRoute: typeof TwoFactorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/creators': {
+      id: '/admin/creators'
+      path: '/admin/creators'
+      fullPath: '/admin/creators'
+      preLoaderRoute: typeof AdminCreatorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/orders': {
@@ -710,6 +730,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TwoFactorRoute: TwoFactorRoute,
+  AdminCreatorsRoute: AdminCreatorsRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminReviewsRoute: AdminReviewsRoute,

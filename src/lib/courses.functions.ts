@@ -14,6 +14,7 @@ import {
 	courseCategories,
 	courseLevels,
 } from "@/lib/course-types";
+import { requireApprovedCreator } from "@/lib/platform.server";
 
 const db = drizzle(env.DB, { schema });
 
@@ -431,6 +432,7 @@ export const publishCourse = createServerFn({ method: "POST" })
 	.validator(validateIdInput)
 	.handler(async ({ data }) => {
 		const { course } = await requireOwnedCourse(data.id);
+		await requireApprovedCreator(course.organizationId);
 		if (course.status !== "draft")
 			throw new Error("Only draft courses can be published.");
 		if (!course.summary || !course.description || !course.thumbnailUrl) {
@@ -498,7 +500,11 @@ export const deleteDraftCourse = createServerFn({ method: "POST" })
 async function fetchPublicCourses(
 	data: ReturnType<typeof validateCatalogInput>,
 ) {
-	const filters = [eq(schema.course.status, "published")];
+	const filters = [
+		eq(schema.course.status, "published"),
+		eq(schema.course.moderationStatus, "active"),
+		eq(schema.creatorApplication.status, "approved"),
+	];
 	if (data.query) {
 		const query = `%${data.query}%`;
 		const searchFilter = or(
@@ -520,6 +526,13 @@ async function fetchPublicCourses(
 			eq(schema.course.organizationId, schema.organization.id),
 		)
 		.innerJoin(schema.user, eq(schema.course.creatorId, schema.user.id))
+		.innerJoin(
+			schema.creatorApplication,
+			eq(
+				schema.course.organizationId,
+				schema.creatorApplication.organizationId,
+			),
+		)
 		.leftJoin(
 			schema.courseSection,
 			eq(schema.course.id, schema.courseSection.courseId),
@@ -554,6 +567,13 @@ export const getPublicCourse = createServerFn({ method: "GET" })
 				eq(schema.course.organizationId, schema.organization.id),
 			)
 			.innerJoin(schema.user, eq(schema.course.creatorId, schema.user.id))
+			.innerJoin(
+				schema.creatorApplication,
+				eq(
+					schema.course.organizationId,
+					schema.creatorApplication.organizationId,
+				),
+			)
 			.leftJoin(
 				schema.courseSection,
 				eq(schema.course.id, schema.courseSection.courseId),
@@ -566,6 +586,8 @@ export const getPublicCourse = createServerFn({ method: "GET" })
 				and(
 					eq(schema.course.slug, data.slug),
 					eq(schema.course.status, "published"),
+					eq(schema.course.moderationStatus, "active"),
+					eq(schema.creatorApplication.status, "approved"),
 				),
 			)
 			.groupBy(schema.course.id)

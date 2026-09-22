@@ -26,6 +26,10 @@ import {
 	saveStorefront,
 	setStorefrontStatus,
 } from "@/lib/creator-commerce.functions";
+import {
+	getCreatorApplication,
+	submitCreatorApplication,
+} from "@/lib/platform.functions";
 
 export const Route = createFileRoute("/workspace/storefront")({
 	beforeLoad: async () => {
@@ -34,7 +38,13 @@ export const Route = createFileRoute("/workspace/storefront")({
 		if (!dashboard.isOrganizationOwner) throw redirect({ to: "/dashboard" });
 		return dashboard;
 	},
-	loader: () => getStorefrontSettings(),
+	loader: async () => {
+		const [storefront, creatorApplication] = await Promise.all([
+			getStorefrontSettings(),
+			getCreatorApplication(),
+		]);
+		return { ...storefront, creatorApplication };
+	},
 	head: () => ({ meta: [{ title: "Storefront | DV LMS" }] }),
 	component: StorefrontSettings,
 });
@@ -54,6 +64,24 @@ function StorefrontSettings() {
 		twitterUrl: initial.profile.twitterUrl ?? "",
 	});
 	const [busy, setBusy] = useState(false);
+	const [applicationNote, setApplicationNote] = useState("");
+	async function applyForCreator() {
+		setBusy(true);
+		try {
+			await submitCreatorApplication({ data: { note: applicationNote } });
+			toast.success("Creator application submitted.");
+			setApplicationNote("");
+			await router.invalidate({ sync: true });
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: "Unable to submit application.",
+			);
+		} finally {
+			setBusy(false);
+		}
+	}
 	async function save(event: React.FormEvent) {
 		event.preventDefault();
 		setBusy(true);
@@ -140,6 +168,60 @@ function StorefrontSettings() {
 								) : null}
 							</div>
 						</div>
+						<Card>
+							<CardHeader>
+								<CardTitle>Creator status</CardTitle>
+							</CardHeader>
+							<CardContent className="space-y-4">
+								<div className="flex items-center gap-2">
+									<Badge
+										variant={
+											initial.creatorApplication.application?.status ===
+											"approved"
+												? "default"
+												: initial.creatorApplication.application?.status ===
+															"suspended" ||
+														initial.creatorApplication.application?.status ===
+															"rejected"
+													? "destructive"
+													: "secondary"
+										}
+									>
+										{initial.creatorApplication.application?.status ??
+											"not applied"}
+									</Badge>
+								</div>
+								{initial.creatorApplication.application?.decisionReason ? (
+									<p className="rounded-md bg-muted p-3 text-sm">
+										{initial.creatorApplication.application.decisionReason}
+									</p>
+								) : null}
+								{(!initial.creatorApplication.application ||
+									initial.creatorApplication.application.status ===
+										"rejected") &&
+								initial.creatorApplication.applicationsOpen ? (
+									<div className="space-y-3">
+										<Label htmlFor="application-note">Application note</Label>
+										<textarea
+											id="application-note"
+											rows={4}
+											value={applicationNote}
+											onChange={(event) =>
+												setApplicationNote(event.target.value)
+											}
+											className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+											placeholder="Tell us about your audience and the courses you plan to publish."
+										/>
+										<Button
+											disabled={busy || !applicationNote.trim()}
+											onClick={applyForCreator}
+										>
+											Apply as creator
+										</Button>
+									</div>
+								) : null}
+							</CardContent>
+						</Card>
 						<form onSubmit={save}>
 							<Card>
 								<CardHeader>

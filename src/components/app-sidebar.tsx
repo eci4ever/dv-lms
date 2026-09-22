@@ -58,6 +58,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	activeItem?:
 		| "account"
 		| "courses"
+		| "creators"
 		| "customers"
 		| "dashboard"
 		| "library"
@@ -360,6 +361,21 @@ export function AppSidebar({
 											label="Overview"
 											tooltip="Platform overview"
 										/>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link
+														to="/admin/creators"
+														search={{ query: "", status: "" }}
+													>
+														<StoreIcon />
+														<span>Creators</span>
+													</Link>
+												}
+												isActive={activeItem === "creators"}
+												tooltip="Creator approvals"
+											/>
+										</SidebarMenuItem>
 										<SidebarMenuItem>
 											<SidebarMenuButton
 												render={

@@ -54,10 +54,18 @@ export async function publishedTrackingTarget(
 				schema.organization,
 				eq(schema.creatorProfile.organizationId, schema.organization.id),
 			)
+			.innerJoin(
+				schema.creatorApplication,
+				eq(
+					schema.creatorProfile.organizationId,
+					schema.creatorApplication.organizationId,
+				),
+			)
 			.where(
 				and(
 					eq(schema.organization.slug, slug),
 					eq(schema.creatorProfile.status, "published"),
+					eq(schema.creatorApplication.status, "approved"),
 				),
 			)
 			.limit(1);
@@ -73,11 +81,20 @@ export async function publishedTrackingTarget(
 			schema.organization,
 			eq(schema.product.organizationId, schema.organization.id),
 		)
+		.innerJoin(
+			schema.creatorApplication,
+			eq(
+				schema.product.organizationId,
+				schema.creatorApplication.organizationId,
+			),
+		)
 		.where(
 			and(
 				eq(schema.product.slug, slug),
 				eq(schema.organization.slug, creatorSlug ?? ""),
 				eq(schema.product.status, "published"),
+				eq(schema.product.moderationStatus, "active"),
+				eq(schema.creatorApplication.status, "approved"),
 			),
 		)
 		.limit(1);
