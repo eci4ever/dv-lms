@@ -224,8 +224,8 @@ function PurchasesPage() {
 						<DialogHeader>
 							<DialogTitle>Request a refund</DialogTitle>
 							<DialogDescription>
-								Requests are reviewed by a platform admin. The 14-day refund
-								window applies.
+								Requests are reviewed by a platform admin. The{" "}
+								{selected?.refundWindowDays ?? 14}-day refund window applies.
 							</DialogDescription>
 						</DialogHeader>
 						<div className="space-y-2">

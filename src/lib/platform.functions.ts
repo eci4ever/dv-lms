@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { and, asc, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
 import { auth } from "@/lib/auth";
@@ -392,13 +392,12 @@ export const moderateContent = createServerFn({ method: "POST" })
 			.set(
 				data.action === "restore"
 					? {
-							status: item.previousStatus ?? "draft",
+							status: item.previousStatus ?? item.status,
 							moderationStatus: "active",
 							moderationPreviousStatus: null,
 							updatedAt: now,
 						}
 					: {
-							status: "draft",
 							moderationStatus: data.action,
 							moderationPreviousStatus: item.status,
 							updatedAt: now,
@@ -424,7 +423,9 @@ export const moderateContent = createServerFn({ method: "POST" })
 		});
 		return {
 			status:
-				data.action === "restore" ? (item.previousStatus ?? "draft") : "draft",
+				data.action === "restore"
+					? (item.previousStatus ?? item.status)
+					: item.status,
 			moderationStatus: data.action === "restore" ? "active" : data.action,
 		};
 	});
@@ -534,4 +535,226 @@ export const movePlatformCategory = createServerFn({ method: "POST" })
 			metadata: { direction: data.direction },
 		});
 		return { moved: true };
+	});
+
+export const getAdminOverview = createServerFn({ method: "GET" })
+	.validator((input: unknown) => {
+		const days = Number(object(input).days);
+		return { days: [7, 30, 90].includes(days) ? days : 30 };
+	})
+	.handler(async ({ data }) => {
+		await adminContext();
+		const since = new Date(Date.now() - data.days * 24 * 60 * 60 * 1000);
+		const [
+			users,
+			courses,
+			products,
+			memberships,
+			creatorGroups,
+			queue,
+			revenue,
+			recent,
+		] = await Promise.all([
+			db.select({ count: sql<number>`count(*)` }).from(schema.user),
+			db.select({ count: sql<number>`count(*)` }).from(schema.course),
+			db.select({ count: sql<number>`count(*)` }).from(schema.product),
+			db
+				.select({ count: sql<number>`count(*)` })
+				.from(schema.subscription)
+				.where(
+					and(
+						or(
+							eq(schema.subscription.status, "active"),
+							eq(schema.subscription.status, "cancelled"),
+						),
+						gte(schema.subscription.currentPeriodEnd, new Date()),
+					),
+				),
+			db
+				.select({
+					status: schema.creatorApplication.status,
+					count: sql<number>`count(*)`,
+				})
+				.from(schema.creatorApplication)
+				.groupBy(schema.creatorApplication.status),
+			db
+				.select({ count: sql<number>`count(*)` })
+				.from(schema.creatorApplication)
+				.where(eq(schema.creatorApplication.status, "pending")),
+			db
+				.select({
+					gross: sql<number>`coalesce(sum(case when ${schema.courseOrder.status} = 'paid' then ${schema.courseOrder.grossInSen} else 0 end),0)`,
+					refunds: sql<number>`coalesce(sum(case when ${schema.courseOrder.status} = 'refunded' then ${schema.courseOrder.grossInSen} else 0 end),0)`,
+					fees: sql<number>`coalesce(sum(case when ${schema.courseOrder.status} = 'paid' then ${schema.courseOrder.platformFeeInSen} else 0 end),0)`,
+					net: sql<number>`coalesce(sum(case when ${schema.courseOrder.status} = 'paid' then ${schema.courseOrder.sellerNetInSen} else 0 end),0)`,
+				})
+				.from(schema.courseOrder)
+				.where(gte(schema.courseOrder.createdAt, since)),
+			db
+				.select({
+					id: schema.auditLog.id,
+					action: schema.auditLog.action,
+					resourceType: schema.auditLog.resourceType,
+					createdAt: schema.auditLog.createdAt,
+				})
+				.from(schema.auditLog)
+				.orderBy(desc(schema.auditLog.createdAt))
+				.limit(8),
+		]);
+		return {
+			days: data.days,
+			counts: {
+				users: Number(users[0]?.count ?? 0),
+				courses: Number(courses[0]?.count ?? 0),
+				products: Number(products[0]?.count ?? 0),
+				activeMemberships: Number(memberships[0]?.count ?? 0),
+				pendingCreators: Number(queue[0]?.count ?? 0),
+			},
+			creators: Object.fromEntries(
+				creatorGroups.map((item) => [item.status, Number(item.count)]),
+			),
+			revenue: {
+				gross: Number(revenue[0]?.gross ?? 0),
+				refunds: Number(revenue[0]?.refunds ?? 0),
+				fees: Number(revenue[0]?.fees ?? 0),
+				net: Number(revenue[0]?.net ?? 0),
+			},
+			recent,
+		};
+	});
+
+export const getAdminSettings = createServerFn({ method: "GET" }).handler(
+	async () => {
+		await adminContext();
+		return getPlatformSettings();
+	},
+);
+export const updateAdminSettings = createServerFn({ method: "POST" })
+	.validator((input: unknown) => {
+		const values = object(input);
+		const platformFeePercent = Number(values.platformFeePercent);
+		const refundWindowDays = Number(values.refundWindowDays);
+		if (
+			!Number.isInteger(platformFeePercent) ||
+			platformFeePercent < 0 ||
+			platformFeePercent > 100
+		)
+			throw new Error("Commission must be between 0 and 100%.");
+		if (
+			!Number.isInteger(refundWindowDays) ||
+			refundWindowDays < 0 ||
+			refundWindowDays > 90
+		)
+			throw new Error("Refund window must be between 0 and 90 days.");
+		return {
+			platformFeePercent,
+			refundWindowDays,
+			creatorApplicationsOpen: values.creatorApplicationsOpen === true,
+			maintenanceMode: values.maintenanceMode === true,
+		};
+	})
+	.handler(async ({ data }) => {
+		const { session } = await adminContext();
+		const previous = await getPlatformSettings();
+		await db
+			.update(schema.platformSetting)
+			.set({ ...data, updatedBy: session.user.id, updatedAt: new Date() })
+			.where(eq(schema.platformSetting.id, "global"));
+		await writeAudit({
+			actorId: session.user.id,
+			action: "platform.settings_updated",
+			resourceType: "platform_setting",
+			resourceId: "global",
+			metadata: {
+				previous: {
+					platformFeePercent: previous.platformFeePercent,
+					refundWindowDays: previous.refundWindowDays,
+					creatorApplicationsOpen: previous.creatorApplicationsOpen,
+					maintenanceMode: previous.maintenanceMode,
+				},
+				next: data,
+			},
+		});
+		return data;
+	});
+
+export const listAuditLogs = createServerFn({ method: "GET" })
+	.validator((input: unknown) => {
+		const values = input ? object(input) : {};
+		return {
+			query:
+				typeof values.query === "string"
+					? values.query.trim().slice(0, 120)
+					: "",
+			action:
+				typeof values.action === "string"
+					? values.action.trim().slice(0, 120)
+					: "",
+		};
+	})
+	.handler(async ({ data }) => {
+		await adminContext();
+		const filters = [];
+		if (data.action)
+			filters.push(like(schema.auditLog.action, `%${data.action}%`));
+		if (data.query) {
+			const pattern = `%${data.query}%`;
+			const filter = or(
+				like(schema.user.name, pattern),
+				like(schema.user.email, pattern),
+				like(schema.organization.name, pattern),
+				like(schema.auditLog.resourceType, pattern),
+				like(schema.auditLog.resourceId, pattern),
+			);
+			if (filter) filters.push(filter);
+		}
+		return db
+			.select({
+				id: schema.auditLog.id,
+				actorName: schema.user.name,
+				actorEmail: schema.user.email,
+				organizationName: schema.organization.name,
+				action: schema.auditLog.action,
+				resourceType: schema.auditLog.resourceType,
+				resourceId: schema.auditLog.resourceId,
+				metadata: schema.auditLog.metadata,
+				impersonated: schema.auditLog.impersonated,
+				createdAt: schema.auditLog.createdAt,
+			})
+			.from(schema.auditLog)
+			.leftJoin(schema.user, eq(schema.auditLog.actorId, schema.user.id))
+			.leftJoin(
+				schema.organization,
+				eq(schema.auditLog.organizationId, schema.organization.id),
+			)
+			.where(filters.length ? and(...filters) : undefined)
+			.orderBy(desc(schema.auditLog.createdAt))
+			.limit(200);
+	});
+
+export const recordAdminAudit = createServerFn({ method: "POST" })
+	.validator((input: unknown) => {
+		const values = object(input);
+		const action = String(values.action);
+		if (!["user.role_changed", "user.impersonation_started"].includes(action))
+			throw new Error("Invalid audit action.");
+		return {
+			action,
+			resourceId: text(values.resourceId, "User", 120),
+			metadata:
+				typeof values.metadata === "object" && values.metadata
+					? (values.metadata as Record<string, unknown>)
+					: {},
+		};
+	})
+	.handler(async ({ data }) => {
+		const { session } = await adminContext();
+		await writeAudit({
+			actorId: session.user.id,
+			action: data.action,
+			resourceType: "user",
+			resourceId: data.resourceId,
+			metadata: data.metadata,
+		});
+		return { recorded: true };
 	});

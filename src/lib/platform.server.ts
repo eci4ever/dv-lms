@@ -34,6 +34,28 @@ export async function creatorStatus(organizationId: string) {
 	return application?.status ?? "not_applied";
 }
 
+export async function creatorSalesAllowed(organizationId: string) {
+	const [creator] = await db
+		.select({ id: schema.creatorApplication.id })
+		.from(schema.creatorApplication)
+		.innerJoin(
+			schema.creatorProfile,
+			eq(
+				schema.creatorApplication.organizationId,
+				schema.creatorProfile.organizationId,
+			),
+		)
+		.where(
+			and(
+				eq(schema.creatorApplication.organizationId, organizationId),
+				eq(schema.creatorApplication.status, "approved"),
+				eq(schema.creatorProfile.moderationStatus, "active"),
+			),
+		)
+		.limit(1);
+	return Boolean(creator);
+}
+
 export async function requireApprovedCreator(organizationId: string) {
 	if ((await creatorStatus(organizationId)) !== "approved") {
 		throw new Error(

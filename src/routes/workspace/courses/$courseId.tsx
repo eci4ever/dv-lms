@@ -79,7 +79,24 @@ export const Route = createFileRoute("/workspace/courses/$courseId")({
 			getWorkspaceCourse({ data: { id: params.courseId } }),
 			listActiveCategories(),
 		]);
-		return { ...dashboard, initialCourse: course, activeCategories };
+		return {
+			...dashboard,
+			initialCourse: course,
+			activeCategories: activeCategories.some(
+				(category) => category.slug === course.category,
+			)
+				? activeCategories
+				: [
+						...activeCategories,
+						{
+							slug: course.category,
+							name: `${course.category} (inactive)`,
+							description: "",
+							featured: false,
+							courseCount: 0,
+						},
+					],
+		};
 	},
 	component: CourseEditor,
 });

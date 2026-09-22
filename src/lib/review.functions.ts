@@ -7,6 +7,7 @@ import { drizzle } from "drizzle-orm/d1";
 import { expireMemberships } from "@/lib/access.server";
 import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
+import { writeAudit } from "@/lib/platform.server";
 
 const db = drizzle(env.DB, { schema });
 
@@ -550,6 +551,12 @@ export const moderateReview = createServerFn({ method: "POST" })
 					),
 				);
 			if (!result.meta.changes) throw new Error("Pending report not found.");
+			await writeAudit({
+				actorId: session.user.id,
+				action: "review.report_dismissed",
+				resourceType: "review_report",
+				resourceId: data.id,
+			});
 			return { action: data.action };
 		}
 		const [review] = await db
@@ -585,5 +592,11 @@ export const moderateReview = createServerFn({ method: "POST" })
 				.set({ status: "published", updatedAt: now })
 				.where(eq(schema.courseReview.id, review.id));
 		}
+		await writeAudit({
+			actorId: session.user.id,
+			action: `review.${data.action}`,
+			resourceType: "course_review",
+			resourceId: review.id,
+		});
 		return { action: data.action };
 	});

@@ -8,7 +8,6 @@ import {
 	Layers3Icon,
 	LayoutDashboardIcon,
 	LibraryIcon,
-	type LucideIcon,
 	MessageSquareMoreIcon,
 	ScrollTextIcon,
 	Settings2Icon,
@@ -57,6 +56,9 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	isImpersonating: boolean;
 	activeItem?:
 		| "account"
+		| "admin-overview"
+		| "admin-settings"
+		| "audit-log"
 		| "courses"
 		| "categories"
 		| "content"
@@ -78,28 +80,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "users";
 }
 
-interface MockSidebarItemProps {
-	icon: LucideIcon;
-	label: string;
-	tooltip?: string;
-}
-
 type SidebarView = "main" | "platform-admin";
-
-function MockSidebarItem({
-	icon: Icon,
-	label,
-	tooltip = label,
-}: MockSidebarItemProps) {
-	return (
-		<SidebarMenuItem>
-			<SidebarMenuButton type="button" tooltip={tooltip}>
-				<Icon />
-				<span>{label}</span>
-			</SidebarMenuButton>
-		</SidebarMenuItem>
-	);
-}
 
 export function AppSidebar({
 	user,
@@ -358,11 +339,18 @@ export function AppSidebar({
 								<SidebarGroupLabel>Platform Admin</SidebarGroupLabel>
 								<SidebarGroupContent>
 									<SidebarMenu>
-										<MockSidebarItem
-											icon={GaugeIcon}
-											label="Overview"
-											tooltip="Platform overview"
-										/>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/admin" search={{ days: 30 }}>
+														<GaugeIcon />
+														<span>Overview</span>
+													</Link>
+												}
+												isActive={activeItem === "admin-overview"}
+												tooltip="Platform overview"
+											/>
+										</SidebarMenuItem>
 										<SidebarMenuItem>
 											<SidebarMenuButton
 												render={
@@ -438,15 +426,33 @@ export function AppSidebar({
 												tooltip="Orders"
 											/>
 										</SidebarMenuItem>
-										<MockSidebarItem
-											icon={CreditCardIcon}
-											label="Plans & Billing"
-										/>
-										<MockSidebarItem icon={ScrollTextIcon} label="Audit Log" />
-										<MockSidebarItem
-											icon={SlidersHorizontalIcon}
-											label="System Settings"
-										/>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link
+														to="/admin/audit-log"
+														search={{ query: "", action: "" }}
+													>
+														<ScrollTextIcon />
+														<span>Audit Log</span>
+													</Link>
+												}
+												isActive={activeItem === "audit-log"}
+												tooltip="Audit log"
+											/>
+										</SidebarMenuItem>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/admin/settings">
+														<SlidersHorizontalIcon />
+														<span>Settings</span>
+													</Link>
+												}
+												isActive={activeItem === "admin-settings"}
+												tooltip="Platform settings"
+											/>
+										</SidebarMenuItem>
 									</SidebarMenu>
 								</SidebarGroupContent>
 							</SidebarGroup>

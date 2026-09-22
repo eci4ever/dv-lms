@@ -65,6 +65,7 @@ import {
 import { getDashboardSession } from "@/lib/auth.functions";
 import { authClient } from "@/lib/auth-client";
 import type { AssignableOrganizationRole } from "@/lib/organization-permissions";
+import { recordAdminAudit } from "@/lib/platform.functions";
 
 export const Route = createFileRoute("/admin/users")({
 	beforeLoad: async () => {
@@ -266,6 +267,13 @@ function UserManagement() {
 		if (result.error) {
 			toast.error(result.error.message ?? "Unable to update this user's role.");
 		} else {
+			await recordAdminAudit({
+				data: {
+					action: "user.role_changed",
+					resourceId: userId,
+					metadata: { role },
+				},
+			});
 			setUsers((currentUsers) =>
 				currentUsers.map((user) =>
 					user.id === userId ? { ...user, role } : user,
@@ -421,6 +429,13 @@ function UserManagement() {
 		} else if (riskAction === "revoke-sessions") {
 			await revokeAllSessions();
 		} else if (riskAction === "impersonate") {
+			await recordAdminAudit({
+				data: {
+					action: "user.impersonation_started",
+					resourceId: selectedUser.id,
+					metadata: { email: selectedUser.email },
+				},
+			});
 			const result = await authClient.admin.impersonateUser({
 				userId: selectedUser.id,
 			});

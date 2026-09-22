@@ -20,12 +20,15 @@ import { Route as PurchasesRouteImport } from './routes/purchases'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TwoFactorRouteImport } from './routes/two-factor'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminAuditLogRouteImport } from './routes/admin/audit-log'
 import { Route as AdminCategoriesRouteImport } from './routes/admin/categories'
 import { Route as AdminContentRouteImport } from './routes/admin/content'
 import { Route as AdminCreatorsRouteImport } from './routes/admin/creators'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
 import { Route as AdminReviewsRouteImport } from './routes/admin/reviews'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as CheckoutOrderIdRouteImport } from './routes/checkout/$orderId'
@@ -101,6 +104,16 @@ const TwoFactorRoute = TwoFactorRouteImport.update({
   path: '/two-factor',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAuditLogRoute = AdminAuditLogRouteImport.update({
+  id: '/admin/audit-log',
+  path: '/admin/audit-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
   id: '/admin/categories',
   path: '/admin/categories',
@@ -129,6 +142,11 @@ const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
 const AdminReviewsRoute = AdminReviewsRouteImport.update({
   id: '/admin/reviews',
   path: '/admin/reviews',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -242,12 +260,14 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/audit-log': typeof AdminAuditLogRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
@@ -258,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
+  '/admin/': typeof AdminIndexRoute
   '/courses/': typeof CoursesIndexRoute
   '/learning/': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -280,12 +301,14 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/audit-log': typeof AdminAuditLogRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
@@ -296,6 +319,7 @@ export interface FileRoutesByTo {
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
+  '/admin': typeof AdminIndexRoute
   '/courses': typeof CoursesIndexRoute
   '/learning': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -319,12 +343,14 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/two-factor': typeof TwoFactorRoute
+  '/admin/audit-log': typeof AdminAuditLogRoute
   '/admin/categories': typeof AdminCategoriesRoute
   '/admin/content': typeof AdminContentRoute
   '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
@@ -335,6 +361,7 @@ export interface FileRoutesById {
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
   '/workspace/storefront': typeof WorkspaceStorefrontRoute
+  '/admin/': typeof AdminIndexRoute
   '/courses/': typeof CoursesIndexRoute
   '/learning/': typeof LearningIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -359,12 +386,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/audit-log'
     | '/admin/categories'
     | '/admin/content'
     | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/reviews'
+    | '/admin/settings'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
@@ -375,6 +404,7 @@ export interface FileRouteTypes {
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
+    | '/admin/'
     | '/courses/'
     | '/learning/'
     | '/api/auth/$'
@@ -397,12 +427,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/audit-log'
     | '/admin/categories'
     | '/admin/content'
     | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/reviews'
+    | '/admin/settings'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
@@ -413,6 +445,7 @@ export interface FileRouteTypes {
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
+    | '/admin'
     | '/courses'
     | '/learning'
     | '/api/auth/$'
@@ -435,12 +468,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/two-factor'
+    | '/admin/audit-log'
     | '/admin/categories'
     | '/admin/content'
     | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/reviews'
+    | '/admin/settings'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
@@ -451,6 +486,7 @@ export interface FileRouteTypes {
     | '/workspace/sales'
     | '/workspace/settings'
     | '/workspace/storefront'
+    | '/admin/'
     | '/courses/'
     | '/learning/'
     | '/api/auth/$'
@@ -474,12 +510,14 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignupRoute: typeof SignupRoute
   TwoFactorRoute: typeof TwoFactorRoute
+  AdminAuditLogRoute: typeof AdminAuditLogRoute
   AdminCategoriesRoute: typeof AdminCategoriesRoute
   AdminContentRoute: typeof AdminContentRoute
   AdminCreatorsRoute: typeof AdminCreatorsRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   CheckoutOrderIdRoute: typeof CheckoutOrderIdRoute
@@ -490,6 +528,7 @@ export interface RootRouteChildren {
   WorkspaceSalesRoute: typeof WorkspaceSalesRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceStorefrontRoute: typeof WorkspaceStorefrontRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   CoursesIndexRoute: typeof CoursesIndexRoute
   LearningIndexRoute: typeof LearningIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -580,6 +619,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TwoFactorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/audit-log': {
+      id: '/admin/audit-log'
+      path: '/admin/audit-log'
+      fullPath: '/admin/audit-log'
+      preLoaderRoute: typeof AdminAuditLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/categories': {
       id: '/admin/categories'
       path: '/admin/categories'
@@ -620,6 +673,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/reviews'
       fullPath: '/admin/reviews'
       preLoaderRoute: typeof AdminReviewsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -770,12 +830,14 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SignupRoute: SignupRoute,
   TwoFactorRoute: TwoFactorRoute,
+  AdminAuditLogRoute: AdminAuditLogRoute,
   AdminCategoriesRoute: AdminCategoriesRoute,
   AdminContentRoute: AdminContentRoute,
   AdminCreatorsRoute: AdminCreatorsRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminReviewsRoute: AdminReviewsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   CheckoutOrderIdRoute: CheckoutOrderIdRoute,
@@ -786,6 +848,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceSalesRoute: WorkspaceSalesRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceStorefrontRoute: WorkspaceStorefrontRoute,
+  AdminIndexRoute: AdminIndexRoute,
   CoursesIndexRoute: CoursesIndexRoute,
   LearningIndexRoute: LearningIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

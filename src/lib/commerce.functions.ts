@@ -19,7 +19,7 @@ import {
 import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
 import {
-	creatorStatus,
+	creatorSalesAllowed,
 	getPlatformSettings,
 	writeAudit,
 } from "@/lib/platform.server";
@@ -181,6 +181,7 @@ const orderSelection = {
 	offerName: schema.courseOrder.offerNameSnapshot,
 	billingType: schema.courseOrder.billingTypeSnapshot,
 	billingInterval: schema.courseOrder.billingIntervalSnapshot,
+	refundWindowDays: schema.courseOrder.refundWindowDaysSnapshot,
 	subscriptionId: schema.courseOrder.subscriptionId,
 	organizationId: schema.organization.id,
 	organizationName: schema.organization.name,
@@ -248,7 +249,7 @@ export const createCheckout = createServerFn({ method: "POST" })
 			offer.productModerationStatus !== "active"
 		)
 			throw new Error("This offer is unavailable.");
-		if ((await creatorStatus(offer.organizationId)) !== "approved")
+		if (!(await creatorSalesAllowed(offer.organizationId)))
 			throw new Error("This creator is not available for new purchases.");
 		const courses = await offerCourses(offer.id);
 		if (
@@ -382,7 +383,7 @@ export const confirmMockPayment = createServerFn({ method: "POST" })
 		if (order.status !== "pending" || order.expiresAt <= new Date())
 			throw new Error("This checkout has expired.");
 		if (!order.offerId) throw new Error("This order has no offer.");
-		if ((await creatorStatus(order.organizationId)) !== "approved")
+		if (!(await creatorSalesAllowed(order.organizationId)))
 			throw new Error("This creator is not available for new purchases.");
 		if (order.productId) {
 			const [product] = await db
@@ -636,7 +637,7 @@ export const renewMockMembership = createServerFn({ method: "POST" })
 			item.productModerationStatus !== "active"
 		)
 			throw new Error("This membership offer is unavailable.");
-		if ((await creatorStatus(item.organizationId)) !== "approved")
+		if (!(await creatorSalesAllowed(item.organizationId)))
 			throw new Error("This creator is not available for renewal.");
 		const now = new Date();
 		const start = item.currentPeriodEnd > now ? item.currentPeriodEnd : now;

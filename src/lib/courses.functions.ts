@@ -520,6 +520,7 @@ async function fetchPublicCourses(
 		eq(schema.course.status, "published"),
 		eq(schema.course.moderationStatus, "active"),
 		eq(schema.creatorApplication.status, "approved"),
+		eq(schema.creatorProfile.moderationStatus, "active"),
 	];
 	if (data.query) {
 		const query = `%${data.query}%`;
@@ -548,6 +549,10 @@ async function fetchPublicCourses(
 				schema.course.organizationId,
 				schema.creatorApplication.organizationId,
 			),
+		)
+		.innerJoin(
+			schema.creatorProfile,
+			eq(schema.course.organizationId, schema.creatorProfile.organizationId),
 		)
 		.leftJoin(
 			schema.courseSection,
@@ -590,6 +595,10 @@ export const getPublicCourse = createServerFn({ method: "GET" })
 					schema.creatorApplication.organizationId,
 				),
 			)
+			.innerJoin(
+				schema.creatorProfile,
+				eq(schema.course.organizationId, schema.creatorProfile.organizationId),
+			)
 			.leftJoin(
 				schema.courseSection,
 				eq(schema.course.id, schema.courseSection.courseId),
@@ -604,6 +613,7 @@ export const getPublicCourse = createServerFn({ method: "GET" })
 					eq(schema.course.status, "published"),
 					eq(schema.course.moderationStatus, "active"),
 					eq(schema.creatorApplication.status, "approved"),
+					eq(schema.creatorProfile.moderationStatus, "active"),
 				),
 			)
 			.groupBy(schema.course.id)
