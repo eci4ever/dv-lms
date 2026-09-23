@@ -5,6 +5,7 @@ import {
 	Building2Icon,
 	CreditCardIcon,
 	GaugeIcon,
+	LandmarkIcon,
 	Layers3Icon,
 	LayoutDashboardIcon,
 	LibraryIcon,
@@ -70,6 +71,8 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "memberships"
 		| "organizations"
 		| "orders"
+		| "payouts"
+		| "admin-payouts"
 		| "purchases"
 		| "products"
 		| "reviews"
@@ -200,6 +203,20 @@ export function AppSidebar({
 								<SidebarGroupLabel>Workspace</SidebarGroupLabel>
 								<SidebarGroupContent>
 									<SidebarMenu>
+										{isOrganizationOwner ? (
+											<SidebarMenuItem>
+												<SidebarMenuButton
+													render={
+														<Link to="/workspace/payouts">
+															<LandmarkIcon />
+															<span>Payouts</span>
+														</Link>
+													}
+													isActive={activeItem === "payouts"}
+													tooltip="Payouts"
+												/>
+											</SidebarMenuItem>
+										) : null}
 										{isOrganizationOwner ? (
 											<SidebarMenuItem>
 												<SidebarMenuButton
@@ -424,6 +441,18 @@ export function AppSidebar({
 												}
 												isActive={activeItem === "orders"}
 												tooltip="Orders"
+											/>
+										</SidebarMenuItem>
+										<SidebarMenuItem>
+											<SidebarMenuButton
+												render={
+													<Link to="/admin/payouts">
+														<LandmarkIcon />
+														<span>Payouts</span>
+													</Link>
+												}
+												isActive={activeItem === "admin-payouts"}
+												tooltip="Creator payouts"
 											/>
 										</SidebarMenuItem>
 										<SidebarMenuItem>

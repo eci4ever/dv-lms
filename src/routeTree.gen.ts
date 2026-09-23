@@ -27,6 +27,7 @@ import { Route as AdminContentRouteImport } from './routes/admin/content'
 import { Route as AdminCreatorsRouteImport } from './routes/admin/creators'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
+import { Route as AdminPayoutsRouteImport } from './routes/admin/payouts'
 import { Route as AdminReviewsRouteImport } from './routes/admin/reviews'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
@@ -37,6 +38,7 @@ import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
 import { Route as CreatorsSlugRouteImport } from './routes/creators/$slug'
 import { Route as LearningIndexRouteImport } from './routes/learning/index'
 import { Route as WorkspaceCustomersRouteImport } from './routes/workspace/customers'
+import { Route as WorkspacePayoutsRouteImport } from './routes/workspace/payouts'
 import { Route as WorkspaceReviewsRouteImport } from './routes/workspace/reviews'
 import { Route as WorkspaceSalesRouteImport } from './routes/workspace/sales'
 import { Route as WorkspaceSettingsRouteImport } from './routes/workspace/settings'
@@ -47,6 +49,7 @@ import { Route as WorkspaceCoursesIndexRouteImport } from './routes/workspace/co
 import { Route as WorkspaceCoursesCourseIdRouteImport } from './routes/workspace/courses/$courseId'
 import { Route as WorkspaceProductsIndexRouteImport } from './routes/workspace/products/index'
 import { Route as WorkspaceProductsProductIdRouteImport } from './routes/workspace/products/$productId'
+import { Route as ApiPaymentsBillplzCallbackRouteImport } from './routes/api/payments/billplz/callback'
 import { Route as CreatorsCreatorSlugProductsProductSlugRouteImport } from './routes/creators/$creatorSlug/products/$productSlug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -139,6 +142,11 @@ const AdminOrganizationsRoute = AdminOrganizationsRouteImport.update({
   path: '/admin/organizations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
+  id: '/admin/payouts',
+  path: '/admin/payouts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminReviewsRoute = AdminReviewsRouteImport.update({
   id: '/admin/reviews',
   path: '/admin/reviews',
@@ -187,6 +195,11 @@ const LearningIndexRoute = LearningIndexRouteImport.update({
 const WorkspaceCustomersRoute = WorkspaceCustomersRouteImport.update({
   id: '/workspace/customers',
   path: '/workspace/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspacePayoutsRoute = WorkspacePayoutsRouteImport.update({
+  id: '/workspace/payouts',
+  path: '/workspace/payouts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceReviewsRoute = WorkspaceReviewsRouteImport.update({
@@ -241,6 +254,12 @@ const WorkspaceProductsProductIdRoute =
     path: '/workspace/products/$productId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPaymentsBillplzCallbackRoute =
+  ApiPaymentsBillplzCallbackRouteImport.update({
+    id: '/api/payments/billplz/callback',
+    path: '/api/payments/billplz/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CreatorsCreatorSlugProductsProductSlugRoute =
   CreatorsCreatorSlugProductsProductSlugRouteImport.update({
     id: '/creators/$creatorSlug/products/$productSlug',
@@ -266,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -274,6 +294,7 @@ export interface FileRoutesByFullPath {
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
+  '/workspace/payouts': typeof WorkspacePayoutsRoute
   '/workspace/reviews': typeof WorkspaceReviewsRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
@@ -287,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/workspace/products/$productId': typeof WorkspaceProductsProductIdRoute
   '/workspace/courses/': typeof WorkspaceCoursesIndexRoute
   '/workspace/products/': typeof WorkspaceProductsIndexRoute
+  '/api/payments/billplz/callback': typeof ApiPaymentsBillplzCallbackRoute
   '/creators/$creatorSlug/products/$productSlug': typeof CreatorsCreatorSlugProductsProductSlugRoute
 }
 export interface FileRoutesByTo {
@@ -307,6 +329,7 @@ export interface FileRoutesByTo {
   '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -315,6 +338,7 @@ export interface FileRoutesByTo {
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
+  '/workspace/payouts': typeof WorkspacePayoutsRoute
   '/workspace/reviews': typeof WorkspaceReviewsRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
@@ -328,6 +352,7 @@ export interface FileRoutesByTo {
   '/workspace/products/$productId': typeof WorkspaceProductsProductIdRoute
   '/workspace/courses': typeof WorkspaceCoursesIndexRoute
   '/workspace/products': typeof WorkspaceProductsIndexRoute
+  '/api/payments/billplz/callback': typeof ApiPaymentsBillplzCallbackRoute
   '/creators/$creatorSlug/products/$productSlug': typeof CreatorsCreatorSlugProductsProductSlugRoute
 }
 export interface FileRoutesById {
@@ -349,6 +374,7 @@ export interface FileRoutesById {
   '/admin/creators': typeof AdminCreatorsRoute
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
@@ -357,6 +383,7 @@ export interface FileRoutesById {
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
+  '/workspace/payouts': typeof WorkspacePayoutsRoute
   '/workspace/reviews': typeof WorkspaceReviewsRoute
   '/workspace/sales': typeof WorkspaceSalesRoute
   '/workspace/settings': typeof WorkspaceSettingsRoute
@@ -370,6 +397,7 @@ export interface FileRoutesById {
   '/workspace/products/$productId': typeof WorkspaceProductsProductIdRoute
   '/workspace/courses/': typeof WorkspaceCoursesIndexRoute
   '/workspace/products/': typeof WorkspaceProductsIndexRoute
+  '/api/payments/billplz/callback': typeof ApiPaymentsBillplzCallbackRoute
   '/creators/$creatorSlug/products/$productSlug': typeof CreatorsCreatorSlugProductsProductSlugRoute
 }
 export interface FileRouteTypes {
@@ -392,6 +420,7 @@ export interface FileRouteTypes {
     | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
+    | '/admin/payouts'
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/users'
@@ -400,6 +429,7 @@ export interface FileRouteTypes {
     | '/courses/$slug'
     | '/creators/$slug'
     | '/workspace/customers'
+    | '/workspace/payouts'
     | '/workspace/reviews'
     | '/workspace/sales'
     | '/workspace/settings'
@@ -413,6 +443,7 @@ export interface FileRouteTypes {
     | '/workspace/products/$productId'
     | '/workspace/courses/'
     | '/workspace/products/'
+    | '/api/payments/billplz/callback'
     | '/creators/$creatorSlug/products/$productSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -433,6 +464,7 @@ export interface FileRouteTypes {
     | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
+    | '/admin/payouts'
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/users'
@@ -441,6 +473,7 @@ export interface FileRouteTypes {
     | '/courses/$slug'
     | '/creators/$slug'
     | '/workspace/customers'
+    | '/workspace/payouts'
     | '/workspace/reviews'
     | '/workspace/sales'
     | '/workspace/settings'
@@ -454,6 +487,7 @@ export interface FileRouteTypes {
     | '/workspace/products/$productId'
     | '/workspace/courses'
     | '/workspace/products'
+    | '/api/payments/billplz/callback'
     | '/creators/$creatorSlug/products/$productSlug'
   id:
     | '__root__'
@@ -474,6 +508,7 @@ export interface FileRouteTypes {
     | '/admin/creators'
     | '/admin/orders'
     | '/admin/organizations'
+    | '/admin/payouts'
     | '/admin/reviews'
     | '/admin/settings'
     | '/admin/users'
@@ -482,6 +517,7 @@ export interface FileRouteTypes {
     | '/courses/$slug'
     | '/creators/$slug'
     | '/workspace/customers'
+    | '/workspace/payouts'
     | '/workspace/reviews'
     | '/workspace/sales'
     | '/workspace/settings'
@@ -495,6 +531,7 @@ export interface FileRouteTypes {
     | '/workspace/products/$productId'
     | '/workspace/courses/'
     | '/workspace/products/'
+    | '/api/payments/billplz/callback'
     | '/creators/$creatorSlug/products/$productSlug'
   fileRoutesById: FileRoutesById
 }
@@ -516,6 +553,7 @@ export interface RootRouteChildren {
   AdminCreatorsRoute: typeof AdminCreatorsRoute
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
+  AdminPayoutsRoute: typeof AdminPayoutsRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -524,6 +562,7 @@ export interface RootRouteChildren {
   CoursesSlugRoute: typeof CoursesSlugRoute
   CreatorsSlugRoute: typeof CreatorsSlugRoute
   WorkspaceCustomersRoute: typeof WorkspaceCustomersRoute
+  WorkspacePayoutsRoute: typeof WorkspacePayoutsRoute
   WorkspaceReviewsRoute: typeof WorkspaceReviewsRoute
   WorkspaceSalesRoute: typeof WorkspaceSalesRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
@@ -537,6 +576,7 @@ export interface RootRouteChildren {
   WorkspaceProductsProductIdRoute: typeof WorkspaceProductsProductIdRoute
   WorkspaceCoursesIndexRoute: typeof WorkspaceCoursesIndexRoute
   WorkspaceProductsIndexRoute: typeof WorkspaceProductsIndexRoute
+  ApiPaymentsBillplzCallbackRoute: typeof ApiPaymentsBillplzCallbackRoute
   CreatorsCreatorSlugProductsProductSlugRoute: typeof CreatorsCreatorSlugProductsProductSlugRoute
 }
 
@@ -668,6 +708,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOrganizationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/payouts': {
+      id: '/admin/payouts'
+      path: '/admin/payouts'
+      fullPath: '/admin/payouts'
+      preLoaderRoute: typeof AdminPayoutsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/reviews': {
       id: '/admin/reviews'
       path: '/admin/reviews'
@@ -736,6 +783,13 @@ declare module '@tanstack/react-router' {
       path: '/workspace/customers'
       fullPath: '/workspace/customers'
       preLoaderRoute: typeof WorkspaceCustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/payouts': {
+      id: '/workspace/payouts'
+      path: '/workspace/payouts'
+      fullPath: '/workspace/payouts'
+      preLoaderRoute: typeof WorkspacePayoutsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/reviews': {
@@ -808,6 +862,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceProductsProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/payments/billplz/callback': {
+      id: '/api/payments/billplz/callback'
+      path: '/api/payments/billplz/callback'
+      fullPath: '/api/payments/billplz/callback'
+      preLoaderRoute: typeof ApiPaymentsBillplzCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/creators/$creatorSlug/products/$productSlug': {
       id: '/creators/$creatorSlug/products/$productSlug'
       path: '/creators/$creatorSlug/products/$productSlug'
@@ -836,6 +897,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminCreatorsRoute: AdminCreatorsRoute,
   AdminOrdersRoute: AdminOrdersRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
+  AdminPayoutsRoute: AdminPayoutsRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminUsersRoute: AdminUsersRoute,
@@ -844,6 +906,7 @@ const rootRouteChildren: RootRouteChildren = {
   CoursesSlugRoute: CoursesSlugRoute,
   CreatorsSlugRoute: CreatorsSlugRoute,
   WorkspaceCustomersRoute: WorkspaceCustomersRoute,
+  WorkspacePayoutsRoute: WorkspacePayoutsRoute,
   WorkspaceReviewsRoute: WorkspaceReviewsRoute,
   WorkspaceSalesRoute: WorkspaceSalesRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
@@ -857,6 +920,7 @@ const rootRouteChildren: RootRouteChildren = {
   WorkspaceProductsProductIdRoute: WorkspaceProductsProductIdRoute,
   WorkspaceCoursesIndexRoute: WorkspaceCoursesIndexRoute,
   WorkspaceProductsIndexRoute: WorkspaceProductsIndexRoute,
+  ApiPaymentsBillplzCallbackRoute: ApiPaymentsBillplzCallbackRoute,
   CreatorsCreatorSlugProductsProductSlugRoute:
     CreatorsCreatorSlugProductsProductSlugRoute,
 }
