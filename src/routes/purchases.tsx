@@ -24,6 +24,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -54,6 +55,9 @@ function PurchasesPage() {
 	const router = useRouter();
 	const [selected, setSelected] = useState<Purchase | null>(null);
 	const [reason, setReason] = useState("");
+	const [accountHolderName, setAccountHolderName] = useState("");
+	const [bankName, setBankName] = useState("");
+	const [bankAccountNumber, setBankAccountNumber] = useState("");
 	const [busy, setBusy] = useState(false);
 
 	async function submitRefund(event: React.FormEvent<HTMLFormElement>) {
@@ -61,10 +65,21 @@ function PurchasesPage() {
 		if (!selected) return;
 		setBusy(true);
 		try {
-			await requestRefund({ data: { orderId: selected.id, reason } });
+			await requestRefund({
+				data: {
+					orderId: selected.id,
+					reason,
+					accountHolderName,
+					bankName,
+					bankAccountNumber,
+				},
+			});
 			toast.success("Refund request submitted for admin review.");
 			setSelected(null);
 			setReason("");
+			setAccountHolderName("");
+			setBankName("");
+			setBankAccountNumber("");
 			await router.invalidate({ sync: true });
 		} catch (error) {
 			toast.error(
@@ -228,6 +243,36 @@ function PurchasesPage() {
 								{selected?.refundWindowDays ?? 14}-day refund window applies.
 							</DialogDescription>
 						</DialogHeader>
+						<div className="grid gap-3 sm:grid-cols-2">
+							<div className="space-y-2">
+								<Label htmlFor="refund-holder">Account holder</Label>
+								<Input
+									id="refund-holder"
+									value={accountHolderName}
+									onChange={(event) => setAccountHolderName(event.target.value)}
+									required
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="refund-bank">Bank</Label>
+								<Input
+									id="refund-bank"
+									value={bankName}
+									onChange={(event) => setBankName(event.target.value)}
+									required
+								/>
+							</div>
+							<div className="space-y-2 sm:col-span-2">
+								<Label htmlFor="refund-account">Bank account number</Label>
+								<Input
+									id="refund-account"
+									inputMode="numeric"
+									value={bankAccountNumber}
+									onChange={(event) => setBankAccountNumber(event.target.value)}
+									required
+								/>
+							</div>
+						</div>
 						<div className="space-y-2">
 							<Label htmlFor="refund-reason">Reason</Label>
 							<textarea

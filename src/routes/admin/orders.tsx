@@ -23,7 +23,11 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { getDashboardSession } from "@/lib/auth.functions";
-import { listAdminOrders, resolveRefund } from "@/lib/commerce.functions";
+import {
+	listAdminOrders,
+	resolveRefund,
+	settleRefund,
+} from "@/lib/commerce.functions";
 import { formatCoursePrice } from "@/lib/course-types";
 
 export const Route = createFileRoute("/admin/orders")({
@@ -44,7 +48,7 @@ export const Route = createFileRoute("/admin/orders")({
 });
 
 type AdminOrder = Awaited<ReturnType<typeof listAdminOrders>>[number];
-type Decision = "approved" | "rejected";
+type Decision = "approved" | "rejected" | "settled";
 
 function AdminOrders() {
 	const dashboard = Route.useRouteContext();
@@ -53,6 +57,7 @@ function AdminOrders() {
 	const [selected, setSelected] = useState<AdminOrder | null>(null);
 	const [decision, setDecision] = useState<Decision>("approved");
 	const [note, setNote] = useState("");
+	const [reference, setReference] = useState("");
 	const [busy, setBusy] = useState(false);
 
 	function openResolution(order: AdminOrder, nextDecision: Decision) {
@@ -66,15 +71,28 @@ function AdminOrders() {
 		if (!selected?.refundId) return;
 		setBusy(true);
 		try {
-			await resolveRefund({
-				data: { refundId: selected.refundId, decision, note },
-			});
+			if (decision === "settled")
+				await settleRefund({
+					data: {
+						refundId: selected.refundId,
+						status: "paid",
+						reference,
+						note,
+					},
+				});
+			else
+				await resolveRefund({
+					data: { refundId: selected.refundId, decision, note },
+				});
 			toast.success(
 				decision === "approved"
-					? "Refund approved and course access revoked."
-					: "Refund request rejected.",
+					? "Refund approved for manual transfer."
+					: decision === "settled"
+						? "Refund settled and course access revoked."
+						: "Refund request rejected.",
 			);
 			setSelected(null);
+			setReference("");
 			await router.invalidate({ sync: true });
 		} catch (error) {
 			toast.error(
@@ -208,6 +226,16 @@ function AdminOrders() {
 																				Reject
 																			</Button>
 																		</div>
+																	) : order.refundStatus === "approved" &&
+																		order.refundSettlementStatus !== "paid" ? (
+																		<Button
+																			size="sm"
+																			onClick={() =>
+																				openResolution(order, "settled")
+																			}
+																		>
+																			Mark transfer paid
+																		</Button>
 																	) : null}
 																</div>
 															) : (
@@ -240,12 +268,18 @@ function AdminOrders() {
 					<form onSubmit={resolve} className="contents">
 						<DialogHeader>
 							<DialogTitle>
-								{decision === "approved" ? "Approve refund" : "Reject refund"}
+								{decision === "approved"
+									? "Approve refund"
+									: decision === "settled"
+										? "Confirm refund transfer"
+										: "Reject refund"}
 							</DialogTitle>
 							<DialogDescription>
 								{decision === "approved"
-									? "This marks the order refunded and immediately revokes course access."
-									: "The purchase remains paid and the learner keeps course access."}
+									? "Approval keeps course access active until the bank transfer is confirmed."
+									: decision === "settled"
+										? "Confirming settlement marks the order refunded and revokes access."
+										: "The purchase remains paid and the learner keeps course access."}
 							</DialogDescription>
 						</DialogHeader>
 						{selected ? (
@@ -254,6 +288,20 @@ function AdminOrders() {
 								<p className="mt-1 text-muted-foreground">
 									Reason: {selected.refundReason}
 								</p>
+							</div>
+						) : null}
+						{decision === "settled" ? (
+							<div className="space-y-2">
+								<Label htmlFor="settlement-reference">
+									Bank transfer reference
+								</Label>
+								<input
+									id="settlement-reference"
+									value={reference}
+									onChange={(event) => setReference(event.target.value)}
+									required
+									className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+								/>
 							</div>
 						) : null}
 						<div className="space-y-2">
@@ -276,7 +324,11 @@ function AdminOrders() {
 								disabled={busy}
 							>
 								{busy ? <LoaderCircleIcon className="animate-spin" /> : null}
-								{decision === "approved" ? "Approve refund" : "Reject refund"}
+								{decision === "approved"
+									? "Approve refund"
+									: decision === "settled"
+										? "Confirm transfer"
+										: "Reject refund"}
 							</Button>
 						</DialogFooter>
 					</form>
