@@ -593,6 +593,8 @@ export const courseOrder = sqliteTable(
 		refundWindowDaysSnapshot: integer("refund_window_days_snapshot")
 			.default(14)
 			.notNull(),
+		paymentProvider: text("payment_provider").default("mock").notNull(),
+		paymentFailureReason: text("payment_failure_reason"),
 		expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
 		paidAt: integer("paid_at", { mode: "timestamp_ms" }),
 		refundedAt: integer("refunded_at", { mode: "timestamp_ms" }),
@@ -681,6 +683,13 @@ export const refundRequest = sqliteTable(
 			onDelete: "set null",
 		}),
 		resolutionNote: text("resolution_note"),
+		accountHolderName: text("account_holder_name"),
+		bankName: text("bank_name"),
+		bankAccountEncrypted: text("bank_account_encrypted"),
+		bankAccountLast4: text("bank_account_last4"),
+		settlementStatus: text("settlement_status").default("pending").notNull(),
+		settlementReference: text("settlement_reference"),
+		settledAt: integer("settled_at", { mode: "timestamp_ms" }),
 		requestedAt: integer("requested_at", { mode: "timestamp_ms" })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull(),
@@ -689,6 +698,121 @@ export const refundRequest = sqliteTable(
 	(table) => [
 		uniqueIndex("refundRequest_orderId_unique").on(table.orderId),
 		index("refundRequest_status_idx").on(table.status),
+	],
+);
+
+export const paymentAttempt = sqliteTable(
+	"payment_attempt",
+	{
+		id: text("id").primaryKey(),
+		orderId: text("order_id")
+			.notNull()
+			.references(() => courseOrder.id, { onDelete: "cascade" }),
+		provider: text("provider").default("billplz").notNull(),
+		providerPaymentId: text("provider_payment_id").notNull(),
+		paymentUrl: text("payment_url").notNull(),
+		transactionReference: text("transaction_reference"),
+		paymentChannel: text("payment_channel"),
+		status: text("status").default("pending").notNull(),
+		callbackPayload: text("callback_payload").default("{}").notNull(),
+		failureReason: text("failure_reason"),
+		paidAt: integer("paid_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("paymentAttempt_providerPayment_unique").on(
+			table.provider,
+			table.providerPaymentId,
+		),
+		index("paymentAttempt_order_idx").on(table.orderId),
+		index("paymentAttempt_status_idx").on(table.status),
+	],
+);
+
+export const creatorPayoutProfile = sqliteTable("creator_payout_profile", {
+	organizationId: text("organization_id")
+		.primaryKey()
+		.references(() => organization.id, { onDelete: "cascade" }),
+	accountHolderName: text("account_holder_name").notNull(),
+	bankName: text("bank_name").notNull(),
+	bankAccountEncrypted: text("bank_account_encrypted").notNull(),
+	bankAccountLast4: text("bank_account_last4").notNull(),
+	updatedBy: text("updated_by").references(() => user.id, {
+		onDelete: "set null",
+	}),
+	updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.$onUpdate(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+
+export const creatorPayout = sqliteTable(
+	"creator_payout",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "restrict" }),
+		amountInSen: integer("amount_in_sen").notNull(),
+		currency: text("currency").default("MYR").notNull(),
+		status: text("status").default("draft").notNull(),
+		transferReference: text("transfer_reference"),
+		failureReason: text("failure_reason"),
+		createdBy: text("created_by").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		processedBy: text("processed_by").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		processedAt: integer("processed_at", { mode: "timestamp_ms" }),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("creatorPayout_organization_idx").on(table.organizationId),
+		index("creatorPayout_status_idx").on(table.status),
+	],
+);
+
+export const creatorLedgerEntry = sqliteTable(
+	"creator_ledger_entry",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.references(() => organization.id, { onDelete: "restrict" }),
+		orderId: text("order_id").references(() => courseOrder.id, {
+			onDelete: "restrict",
+		}),
+		payoutId: text("payout_id").references(() => creatorPayout.id, {
+			onDelete: "set null",
+		}),
+		type: text("type").notNull(),
+		amountInSen: integer("amount_in_sen").notNull(),
+		currency: text("currency").default("MYR").notNull(),
+		description: text("description").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		uniqueIndex("creatorLedger_order_type_unique").on(
+			table.orderId,
+			table.type,
+		),
+		index("creatorLedger_organization_idx").on(table.organizationId),
+		index("creatorLedger_payout_idx").on(table.payoutId),
 	],
 );
 
