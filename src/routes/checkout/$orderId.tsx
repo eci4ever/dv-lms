@@ -1,15 +1,10 @@
-import {
-	createFileRoute,
-	Link,
-	redirect,
-	useNavigate,
-} from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import {
 	ArrowLeftIcon,
 	CheckCircle2Icon,
 	Clock3Icon,
+	ExternalLinkIcon,
 	LoaderCircleIcon,
-	LockKeyholeIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -19,7 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getDashboardSession } from "@/lib/auth.functions";
-import { confirmMockPayment, getCheckoutOrder } from "@/lib/commerce.functions";
+import {
+	getCheckoutOrder,
+	retryBillplzCheckout,
+} from "@/lib/commerce.functions";
 import { formatCoursePrice } from "@/lib/course-types";
 
 export const Route = createFileRoute("/checkout/$orderId")({
@@ -35,25 +33,13 @@ export const Route = createFileRoute("/checkout/$orderId")({
 
 function CheckoutPage() {
 	const order = Route.useLoaderData();
-	const navigate = useNavigate();
 	const [busy, setBusy] = useState(false);
 
-	async function confirmPayment() {
+	async function continuePayment() {
 		setBusy(true);
 		try {
-			const result = await confirmMockPayment({ data: { id: order.id } });
-			toast.success("Mock payment confirmed. Course access is ready.");
-			if (result.firstLessonId) {
-				await navigate({
-					to: "/learning/$slug/$lessonId",
-					params: {
-						slug: result.courseSlug,
-						lessonId: result.firstLessonId,
-					},
-				});
-			} else {
-				await navigate({ to: "/library" });
-			}
+			const result = await retryBillplzCheckout({ data: { id: order.id } });
+			window.location.assign(result.paymentUrl);
 		} catch (error) {
 			toast.error(
 				error instanceof Error ? error.message : "Unable to confirm payment.",
@@ -92,12 +78,11 @@ function CheckoutPage() {
 					<Card>
 						<CardHeader>
 							<div className="flex items-center justify-between gap-4">
-								<CardTitle>Mock checkout</CardTitle>
+								<CardTitle>Secure checkout</CardTitle>
 								<OrderStatusBadge status={order.status} />
 							</div>
 							<p className="text-sm text-muted-foreground">
-								Use this checkout to test the complete purchase flow. No money
-								will be charged.
+								Continue to Billplz Sandbox to complete this test payment.
 							</p>
 						</CardHeader>
 						<CardContent className="space-y-5">
@@ -156,14 +141,14 @@ function CheckoutPage() {
 									className="w-full"
 									size="lg"
 									disabled={busy}
-									onClick={confirmPayment}
+									onClick={continuePayment}
 								>
 									{busy ? (
 										<LoaderCircleIcon className="animate-spin" />
 									) : (
-										<LockKeyholeIcon />
+										<ExternalLinkIcon />
 									)}
-									Confirm mock payment
+									Continue with Billplz
 								</Button>
 							) : order.status === "paid" ? (
 								<Button

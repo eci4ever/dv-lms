@@ -564,7 +564,7 @@ function EnrollmentAction({
 					Buy now
 				</Button>
 				<p className="text-center text-xs text-muted-foreground">
-					Mock checkout for testing. No money will be charged.
+					Secure test payment through Billplz Sandbox.
 				</p>
 			</>
 		);

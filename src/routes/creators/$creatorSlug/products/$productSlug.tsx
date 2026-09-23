@@ -144,14 +144,16 @@ function PublicProduct() {
 									</p>
 									<Button
 										className="mt-4 w-full"
-										disabled={Boolean(busy)}
+										disabled={
+											Boolean(busy) || offer.billingType === "recurring"
+										}
 										onClick={() => checkout(offer.id)}
 									>
 										{busy === offer.id ? (
 											<LoaderCircleIcon className="animate-spin" />
 										) : null}
 										{offer.billingType === "recurring"
-											? "Join membership"
+											? "Membership payment coming soon"
 											: "Buy now"}
 									</Button>
 								</div>

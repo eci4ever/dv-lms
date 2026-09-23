@@ -4,8 +4,8 @@ import {
 	redirect,
 	useRouter,
 } from "@tanstack/react-router";
-import { CalendarClockIcon, CreditCardIcon, RefreshCwIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { CalendarClockIcon, CreditCardIcon } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { AppSidebar } from "@/components/app-sidebar";
@@ -19,11 +19,7 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { getDashboardSession } from "@/lib/auth.functions";
-import {
-	cancelMembership,
-	listMemberships,
-	renewMockMembership,
-} from "@/lib/commerce.functions";
+import { cancelMembership, listMemberships } from "@/lib/commerce.functions";
 
 export const Route = createFileRoute("/memberships")({
 	head: () => ({ meta: [{ title: "Memberships | DV LMS" }] }),
@@ -53,7 +49,6 @@ function MembershipsPage() {
 	const memberships = Route.useLoaderData();
 	const router = useRouter();
 	const [busy, setBusy] = useState<string | null>(null);
-	const renewalKeys = useRef<Record<string, string>>({});
 	async function cancel(id: string) {
 		setBusy(id);
 		try {
@@ -63,24 +58,6 @@ function MembershipsPage() {
 		} catch (error) {
 			toast.error(
 				error instanceof Error ? error.message : "Unable to cancel membership.",
-			);
-		} finally {
-			setBusy(null);
-		}
-	}
-	async function renew(id: string) {
-		setBusy(id);
-		renewalKeys.current[id] ||= crypto.randomUUID();
-		try {
-			await renewMockMembership({
-				data: { subscriptionId: id, renewalKey: renewalKeys.current[id] },
-			});
-			delete renewalKeys.current[id];
-			toast.success("Mock renewal completed.");
-			await router.invalidate();
-		} catch (error) {
-			toast.error(
-				error instanceof Error ? error.message : "Unable to renew membership.",
 			);
 		} finally {
 			setBusy(null);
@@ -172,12 +149,8 @@ function MembershipsPage() {
 												>
 													View product
 												</Button>
-												<Button
-													variant="outline"
-													disabled={busy === item.id}
-													onClick={() => renew(item.id)}
-												>
-													<RefreshCwIcon /> Renew mock
+												<Button variant="outline" disabled>
+													Renewal coming soon
 												</Button>
 												{item.status === "active" && !item.cancelAtPeriodEnd ? (
 													<Button

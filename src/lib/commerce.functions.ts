@@ -1,12 +1,11 @@
 import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequestHeaders } from "@tanstack/react-start/server";
+import { getRequest, getRequestHeaders } from "@tanstack/react-start/server";
 import { and, asc, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 import { alias } from "drizzle-orm/sqlite-core";
 
 import {
-	activateEnrollment,
 	expireMemberships,
 	hasPermanentAccess,
 	reconcileCourseAccess,
@@ -18,11 +17,13 @@ import {
 } from "@/lib/analytics.server";
 import { auth } from "@/lib/auth";
 import * as schema from "@/lib/auth-schema";
+import { createBillplzBill, deleteBillplzBill } from "@/lib/billplz.server";
 import {
 	creatorSalesAllowed,
 	getPlatformSettings,
 	writeAudit,
 } from "@/lib/platform.server";
+import { bankAccountLast4, encryptSensitive } from "@/lib/secure-data.server";
 
 const db = drizzle(env.DB, { schema });
 const customer = alias(schema.user, "customer");
@@ -55,6 +56,13 @@ function validateRefund(input: unknown) {
 	return {
 		orderId: required(values.orderId, "Order"),
 		reason: required(values.reason, "Refund reason", 1000),
+		accountHolderName: required(
+			values.accountHolderName,
+			"Account holder",
+			120,
+		),
+		bankName: required(values.bankName, "Bank", 120),
+		bankAccountNumber: required(values.bankAccountNumber, "Bank account", 40),
 	};
 }
 function validateResolution(input: unknown) {
@@ -64,6 +72,17 @@ function validateResolution(input: unknown) {
 	return {
 		refundId: required(values.refundId, "Refund request"),
 		decision: values.decision,
+		note: optional(values.note),
+	};
+}
+function validateSettlement(input: unknown) {
+	const values = record(input);
+	if (values.status !== "paid" && values.status !== "failed")
+		throw new Error("Select a valid settlement status.");
+	return {
+		refundId: required(values.refundId, "Refund request"),
+		status: values.status,
+		reference: required(values.reference, "Transfer reference", 120),
 		note: optional(values.note),
 	};
 }
@@ -113,10 +132,71 @@ async function expirePendingOrders(buyerId?: string) {
 		lte(schema.courseOrder.expiresAt, new Date()),
 	];
 	if (buyerId) filters.push(eq(schema.courseOrder.buyerId, buyerId));
+	const expired = await db
+		.select({ paymentId: schema.paymentAttempt.providerPaymentId })
+		.from(schema.courseOrder)
+		.leftJoin(
+			schema.paymentAttempt,
+			eq(schema.paymentAttempt.orderId, schema.courseOrder.id),
+		)
+		.where(and(...filters));
 	await db
 		.update(schema.courseOrder)
 		.set({ status: "expired", updatedAt: new Date() })
 		.where(and(...filters));
+	for (const item of expired) {
+		if (item.paymentId)
+			await deleteBillplzBill(item.paymentId).catch(() => false);
+	}
+}
+
+async function ensureBillplzAttempt(input: {
+	orderId: string;
+	name: string;
+	email: string;
+	amountInSen: number;
+	description: string;
+}) {
+	const [existing] = await db
+		.select({ url: schema.paymentAttempt.paymentUrl })
+		.from(schema.paymentAttempt)
+		.where(
+			and(
+				eq(schema.paymentAttempt.orderId, input.orderId),
+				eq(schema.paymentAttempt.status, "pending"),
+			),
+		)
+		.orderBy(desc(schema.paymentAttempt.createdAt))
+		.limit(1);
+	if (existing) return existing.url;
+	const requestUrl = new URL(getRequest().url);
+	const origin = requestUrl.origin;
+	try {
+		const bill = await createBillplzBill({
+			...input,
+			callbackUrl: `${origin}/api/payments/billplz/callback`,
+			redirectUrl: `${origin}/checkout/${input.orderId}`,
+		});
+		await db.insert(schema.paymentAttempt).values({
+			id: crypto.randomUUID(),
+			orderId: input.orderId,
+			providerPaymentId: bill.id,
+			paymentUrl: bill.url,
+		});
+		return bill.url;
+	} catch (error) {
+		await db
+			.update(schema.courseOrder)
+			.set({
+				paymentFailureReason:
+					error instanceof Error
+						? error.message.slice(0, 500)
+						: "Bill creation failed.",
+				updatedAt: new Date(),
+			})
+			.where(eq(schema.courseOrder.id, input.orderId));
+		throw error;
+	}
 }
 
 async function offerCourses(offerId: string) {
@@ -140,20 +220,6 @@ async function offerCourses(offerId: string) {
 		)
 		.where(eq(schema.offer.id, offerId))
 		.orderBy(asc(schema.productCourse.position));
-}
-
-async function firstLessonId(courseId: string) {
-	const [lesson] = await db
-		.select({ id: schema.lesson.id })
-		.from(schema.lesson)
-		.innerJoin(
-			schema.courseSection,
-			eq(schema.lesson.sectionId, schema.courseSection.id),
-		)
-		.where(eq(schema.courseSection.courseId, courseId))
-		.orderBy(asc(schema.courseSection.position), asc(schema.lesson.position))
-		.limit(1);
-	return lesson?.id ?? null;
 }
 
 const orderSelection = {
@@ -194,6 +260,23 @@ const orderSelection = {
 	refundReason: schema.refundRequest.reason,
 	refundRequestedAt: schema.refundRequest.requestedAt,
 	refundResolutionNote: schema.refundRequest.resolutionNote,
+	refundSettlementStatus: schema.refundRequest.settlementStatus,
+	refundBankName: schema.refundRequest.bankName,
+	refundBankLast4: schema.refundRequest.bankAccountLast4,
+	paymentProvider: schema.courseOrder.paymentProvider,
+	paymentFailureReason: schema.courseOrder.paymentFailureReason,
+	paymentId: sql<
+		string | null
+	>`(select pa.provider_payment_id from payment_attempt pa where pa.order_id = ${schema.courseOrder.id} order by pa.created_at desc limit 1)`,
+	paymentUrl: sql<
+		string | null
+	>`(select pa.payment_url from payment_attempt pa where pa.order_id = ${schema.courseOrder.id} order by pa.created_at desc limit 1)`,
+	paymentChannel: sql<
+		string | null
+	>`(select pa.payment_channel from payment_attempt pa where pa.order_id = ${schema.courseOrder.id} order by pa.created_at desc limit 1)`,
+	paymentAttemptStatus: sql<
+		string | null
+	>`(select pa.status from payment_attempt pa where pa.order_id = ${schema.courseOrder.id} order by pa.created_at desc limit 1)`,
 };
 function orderQuery() {
 	return db
@@ -260,6 +343,8 @@ export const createCheckout = createServerFn({ method: "POST" })
 			)
 		)
 			throw new Error("A course in this product is unavailable.");
+		if (offer.billingType !== "one_time")
+			throw new Error("Membership payment is coming soon.");
 		if (offer.billingType === "one_time") {
 			const owned = await Promise.all(
 				courses.map((course) => hasPermanentAccess(session.user.id, course.id)),
@@ -284,6 +369,13 @@ export const createCheckout = createServerFn({ method: "POST" })
 			cookieValue(headers.get("cookie"), analyticsCookieName) ??
 			`user-${session.user.id}`;
 		if (pending) {
+			await ensureBillplzAttempt({
+				orderId: pending.id,
+				name: session.user.name,
+				email: session.user.email,
+				amountInSen: offer.priceInSen,
+				description: `${offer.productName} — ${offer.offerName}`,
+			});
 			await recordAnalyticsEvent({
 				organizationId: offer.organizationId,
 				productId: offer.productId,
@@ -315,8 +407,24 @@ export const createCheckout = createServerFn({ method: "POST" })
 			billingIntervalSnapshot: offer.billingInterval,
 			platformFeePercentSnapshot: settings.platformFeePercent,
 			refundWindowDaysSnapshot: settings.refundWindowDays,
+			paymentProvider: "billplz",
 			expiresAt: new Date(Date.now() + checkoutLifetimeMs),
 		});
+		try {
+			await ensureBillplzAttempt({
+				orderId: id,
+				name: session.user.name,
+				email: session.user.email,
+				amountInSen: offer.priceInSen,
+				description: `${offer.productName} — ${offer.offerName}`,
+			});
+		} catch (error) {
+			await db
+				.update(schema.courseOrder)
+				.set({ status: "failed", updatedAt: new Date() })
+				.where(eq(schema.courseOrder.id, id));
+			throw error;
+		}
 		await recordAnalyticsEvent({
 			organizationId: offer.organizationId,
 			productId: offer.productId,
@@ -326,6 +434,45 @@ export const createCheckout = createServerFn({ method: "POST" })
 			source: "checkout",
 		});
 		return { orderId: id, reused: false };
+	});
+
+export const retryBillplzCheckout = createServerFn({ method: "POST" })
+	.validator(validateId)
+	.handler(async ({ data }) => {
+		const { session } = await requireSession();
+		const [order] = await db
+			.select()
+			.from(schema.courseOrder)
+			.where(
+				and(
+					eq(schema.courseOrder.id, data.id),
+					eq(schema.courseOrder.buyerId, session.user.id),
+				),
+			)
+			.limit(1);
+		if (!order || order.status !== "pending")
+			throw new Error("This checkout is no longer payable.");
+		if (order.expiresAt <= new Date()) {
+			const attempts = await db
+				.select({ id: schema.paymentAttempt.providerPaymentId })
+				.from(schema.paymentAttempt)
+				.where(eq(schema.paymentAttempt.orderId, order.id));
+			for (const attempt of attempts)
+				await deleteBillplzBill(attempt.id).catch(() => false);
+			await db
+				.update(schema.courseOrder)
+				.set({ status: "expired", updatedAt: new Date() })
+				.where(eq(schema.courseOrder.id, order.id));
+			throw new Error("This checkout has expired. Start a new checkout.");
+		}
+		const paymentUrl = await ensureBillplzAttempt({
+			orderId: order.id,
+			name: session.user.name,
+			email: session.user.email,
+			amountInSen: order.grossInSen,
+			description: `${order.productNameSnapshot ?? "Course purchase"} — ${order.offerNameSnapshot ?? "Offer"}`,
+		});
+		return { paymentUrl };
 	});
 
 export const getCheckoutOrder = createServerFn({ method: "GET" })
@@ -357,160 +504,8 @@ export const getCheckoutOrder = createServerFn({ method: "GET" })
 
 export const confirmMockPayment = createServerFn({ method: "POST" })
 	.validator(validateId)
-	.handler(async ({ data }) => {
-		const { session } = await requireSession();
-		await expirePendingOrders(session.user.id);
-		const [order] = await db
-			.select()
-			.from(schema.courseOrder)
-			.where(
-				and(
-					eq(schema.courseOrder.id, data.id),
-					eq(schema.courseOrder.buyerId, session.user.id),
-				),
-			)
-			.limit(1);
-		if (!order) throw new Error("Checkout order not found.");
-		if (order.status === "paid") {
-			const courses = order.offerId ? await offerCourses(order.offerId) : [];
-			return {
-				paid: true,
-				courseSlug: courses[0]?.slug ?? "",
-				firstLessonId: courses[0] ? await firstLessonId(courses[0].id) : null,
-				subscriptionId: order.subscriptionId,
-			};
-		}
-		if (order.status !== "pending" || order.expiresAt <= new Date())
-			throw new Error("This checkout has expired.");
-		if (!order.offerId) throw new Error("This order has no offer.");
-		if (!(await creatorSalesAllowed(order.organizationId)))
-			throw new Error("This creator is not available for new purchases.");
-		if (order.productId) {
-			const [product] = await db
-				.select({
-					status: schema.product.status,
-					moderationStatus: schema.product.moderationStatus,
-				})
-				.from(schema.product)
-				.where(eq(schema.product.id, order.productId))
-				.limit(1);
-			if (
-				!product ||
-				product.status !== "published" ||
-				product.moderationStatus !== "active"
-			)
-				throw new Error("This product is unavailable.");
-		}
-		const courses = await offerCourses(order.offerId);
-		if (
-			!courses.length ||
-			courses.some(
-				(course) =>
-					course.status !== "published" || course.moderationStatus !== "active",
-			)
-		)
-			throw new Error("A course in this product is unavailable.");
-		const now = new Date();
-		if (order.billingTypeSnapshot === "recurring") {
-			const subscriptionId = `subscription-${order.id}`;
-			const periodEnd = new Date(now);
-			periodEnd.setUTCDate(
-				periodEnd.getUTCDate() +
-					(order.billingIntervalSnapshot === "year" ? 365 : 30),
-			);
-			await db.batch([
-				db
-					.insert(schema.subscription)
-					.values({
-						id: subscriptionId,
-						buyerId: session.user.id,
-						offerId: order.offerId,
-						organizationId: order.organizationId,
-						currentPeriodStart: now,
-						currentPeriodEnd: periodEnd,
-					})
-					.onConflictDoNothing(),
-				db
-					.update(schema.courseOrder)
-					.set({
-						status: "paid",
-						subscriptionId,
-						mockPaymentReference: `MOCK-${order.id}`,
-						paidAt: now,
-						updatedAt: now,
-					})
-					.where(
-						and(
-							eq(schema.courseOrder.id, order.id),
-							eq(schema.courseOrder.status, "pending"),
-						),
-					),
-				...courses.map((course) =>
-					db
-						.insert(schema.subscriptionEntitlement)
-						.values({
-							id: crypto.randomUUID(),
-							subscriptionId,
-							courseId: course.id,
-						})
-						.onConflictDoUpdate({
-							target: [
-								schema.subscriptionEntitlement.subscriptionId,
-								schema.subscriptionEntitlement.courseId,
-							],
-							set: { status: "active", revokedAt: null },
-						}),
-				),
-			]);
-			for (const course of courses)
-				await activateEnrollment(session.user.id, course.id, now);
-			return {
-				paid: true,
-				courseSlug: courses[0].slug,
-				firstLessonId: await firstLessonId(courses[0].id),
-				subscriptionId,
-			};
-		}
-		await db.batch([
-			db
-				.update(schema.courseOrder)
-				.set({
-					status: "paid",
-					mockPaymentReference: `MOCK-${order.id}`,
-					paidAt: now,
-					updatedAt: now,
-				})
-				.where(
-					and(
-						eq(schema.courseOrder.id, order.id),
-						eq(schema.courseOrder.status, "pending"),
-					),
-				),
-			...courses.map((course) =>
-				db
-					.insert(schema.orderEntitlement)
-					.values({
-						id: crypto.randomUUID(),
-						orderId: order.id,
-						courseId: course.id,
-					})
-					.onConflictDoUpdate({
-						target: [
-							schema.orderEntitlement.orderId,
-							schema.orderEntitlement.courseId,
-						],
-						set: { status: "active", revokedAt: null },
-					}),
-			),
-		]);
-		for (const course of courses)
-			await activateEnrollment(session.user.id, course.id, now);
-		return {
-			paid: true,
-			courseSlug: courses[0].slug,
-			firstLessonId: await firstLessonId(courses[0].id),
-			subscriptionId: null,
-		};
+	.handler(async () => {
+		throw new Error("Mock payment is disabled. Continue with Billplz Sandbox.");
 	});
 
 function validateRenewal(input: unknown) {
@@ -586,113 +581,8 @@ export const cancelMembership = createServerFn({ method: "POST" })
 
 export const renewMockMembership = createServerFn({ method: "POST" })
 	.validator(validateRenewal)
-	.handler(async ({ data }) => {
-		const { session } = await requireSession();
-		const settings = await getPlatformSettings();
-		if (settings.maintenanceMode)
-			throw new Error("Membership renewal is temporarily unavailable.");
-		await expireMemberships(session.user.id);
-		const reference = `MOCK-RENEW-${data.renewalKey}`;
-		const [existing] = await db
-			.select({ id: schema.courseOrder.id })
-			.from(schema.courseOrder)
-			.where(
-				and(
-					eq(schema.courseOrder.buyerId, session.user.id),
-					eq(schema.courseOrder.mockPaymentReference, reference),
-				),
-			)
-			.limit(1);
-		if (existing) return { orderId: existing.id, reused: true };
-		const [item] = await db
-			.select({
-				id: schema.subscription.id,
-				offerId: schema.subscription.offerId,
-				organizationId: schema.subscription.organizationId,
-				currentPeriodEnd: schema.subscription.currentPeriodEnd,
-				productId: schema.product.id,
-				productName: schema.product.name,
-				productStatus: schema.product.status,
-				productModerationStatus: schema.product.moderationStatus,
-				offerName: schema.offer.name,
-				offerStatus: schema.offer.status,
-				priceInSen: schema.offer.priceInSen,
-				currency: schema.offer.currency,
-				billingInterval: schema.offer.billingInterval,
-			})
-			.from(schema.subscription)
-			.innerJoin(schema.offer, eq(schema.subscription.offerId, schema.offer.id))
-			.innerJoin(schema.product, eq(schema.offer.productId, schema.product.id))
-			.where(
-				and(
-					eq(schema.subscription.id, data.subscriptionId),
-					eq(schema.subscription.buyerId, session.user.id),
-				),
-			)
-			.limit(1);
-		if (!item) throw new Error("Membership not found.");
-		if (
-			item.offerStatus !== "active" ||
-			item.productStatus !== "published" ||
-			item.productModerationStatus !== "active"
-		)
-			throw new Error("This membership offer is unavailable.");
-		if (!(await creatorSalesAllowed(item.organizationId)))
-			throw new Error("This creator is not available for renewal.");
-		const now = new Date();
-		const start = item.currentPeriodEnd > now ? item.currentPeriodEnd : now;
-		const end = new Date(start);
-		end.setUTCDate(
-			end.getUTCDate() + (item.billingInterval === "year" ? 365 : 30),
-		);
-		const courses = await offerCourses(item.offerId);
-		const id = crypto.randomUUID();
-		const fee = Math.round(
-			(item.priceInSen * settings.platformFeePercent) / 100,
-		);
-		await db.batch([
-			db.insert(schema.courseOrder).values({
-				id,
-				buyerId: session.user.id,
-				courseId: courses[0]?.id ?? null,
-				productId: item.productId,
-				offerId: item.offerId,
-				subscriptionId: item.id,
-				organizationId: item.organizationId,
-				currency: item.currency,
-				grossInSen: item.priceInSen,
-				platformFeeInSen: fee,
-				sellerNetInSen: item.priceInSen - fee,
-				status: "paid",
-				mockPaymentReference: reference,
-				productNameSnapshot: item.productName,
-				offerNameSnapshot: item.offerName,
-				billingTypeSnapshot: "recurring",
-				billingIntervalSnapshot: item.billingInterval,
-				platformFeePercentSnapshot: settings.platformFeePercent,
-				refundWindowDaysSnapshot: settings.refundWindowDays,
-				expiresAt: now,
-				paidAt: now,
-			}),
-			db
-				.update(schema.subscription)
-				.set({
-					status: "active",
-					currentPeriodStart: start,
-					currentPeriodEnd: end,
-					cancelAtPeriodEnd: false,
-					cancelledAt: null,
-					updatedAt: now,
-				})
-				.where(eq(schema.subscription.id, item.id)),
-			db
-				.update(schema.subscriptionEntitlement)
-				.set({ status: "active", revokedAt: null })
-				.where(eq(schema.subscriptionEntitlement.subscriptionId, item.id)),
-		]);
-		for (const course of courses)
-			await activateEnrollment(session.user.id, course.id, now);
-		return { orderId: id, reused: false };
+	.handler(async () => {
+		throw new Error("Membership renewal payment is coming soon.");
 	});
 
 export const listPurchases = createServerFn({ method: "GET" }).handler(
@@ -740,11 +630,18 @@ export const requestRefund = createServerFn({ method: "POST" })
 		if (existing)
 			throw new Error("A refund decision already exists for this order.");
 		const id = crypto.randomUUID();
+		const accountNumber = data.bankAccountNumber.replace(/[\s-]+/g, "");
+		if (!/^\d{6,24}$/.test(accountNumber))
+			throw new Error("Enter a valid bank account number.");
 		await db.insert(schema.refundRequest).values({
 			id,
 			orderId: order.id,
 			requesterId: session.user.id,
 			reason: data.reason,
+			accountHolderName: data.accountHolderName,
+			bankName: data.bankName,
+			bankAccountEncrypted: await encryptSensitive(accountNumber),
+			bankAccountLast4: bankAccountLast4(accountNumber),
 		});
 		return { id, status: "pending" as const };
 	});
@@ -883,78 +780,105 @@ export const resolveRefund = createServerFn({ method: "POST" })
 			});
 			return { status: data.decision };
 		}
-		const orderEntitlements = await db
-			.select({ courseId: schema.orderEntitlement.courseId })
-			.from(schema.orderEntitlement)
-			.where(eq(schema.orderEntitlement.orderId, request.orderId));
-		const subscriptionEntitlements = request.subscriptionId
-			? await db
-					.select({ courseId: schema.subscriptionEntitlement.courseId })
-					.from(schema.subscriptionEntitlement)
-					.where(
-						eq(
-							schema.subscriptionEntitlement.subscriptionId,
-							request.subscriptionId,
-						),
-					)
-			: [];
-		if (request.subscriptionId) {
-			await db.batch([
-				resolution,
-				db
-					.update(schema.courseOrder)
-					.set({ status: "refunded", refundedAt: now, updatedAt: now })
-					.where(eq(schema.courseOrder.id, request.orderId)),
-				db
-					.update(schema.orderEntitlement)
-					.set({ status: "revoked", revokedAt: now })
-					.where(eq(schema.orderEntitlement.orderId, request.orderId)),
-				db
-					.update(schema.subscription)
-					.set({
-						status: "refunded",
-						currentPeriodEnd: now,
-						cancelAtPeriodEnd: false,
-						updatedAt: now,
-					})
-					.where(eq(schema.subscription.id, request.subscriptionId)),
-				db
-					.update(schema.subscriptionEntitlement)
-					.set({ status: "revoked", revokedAt: now })
-					.where(
-						eq(
-							schema.subscriptionEntitlement.subscriptionId,
-							request.subscriptionId,
-						),
-					),
-			]);
-		} else {
-			await db.batch([
-				resolution,
-				db
-					.update(schema.courseOrder)
-					.set({ status: "refunded", refundedAt: now, updatedAt: now })
-					.where(eq(schema.courseOrder.id, request.orderId)),
-				db
-					.update(schema.orderEntitlement)
-					.set({ status: "revoked", revokedAt: now })
-					.where(eq(schema.orderEntitlement.orderId, request.orderId)),
-			]);
-		}
-		await reconcileCourseAccess(
-			request.buyerId,
-			[...orderEntitlements, ...subscriptionEntitlements].map(
-				(item) => item.courseId,
-			),
-			now,
-		);
+		await resolution;
 		await writeAudit({
 			actorId: session.user.id,
 			organizationId: request.organizationId,
-			action: "refund.approved",
+			action: "refund.approved_for_settlement",
 			resourceType: "refund_request",
 			resourceId: request.id,
 			metadata: { orderId: request.orderId, note: data.note },
 		});
 		return { status: data.decision };
+	});
+
+export const settleRefund = createServerFn({ method: "POST" })
+	.validator(validateSettlement)
+	.handler(async ({ data }) => {
+		const { session } = await requirePlatformAdmin();
+		const [request] = await db
+			.select({
+				id: schema.refundRequest.id,
+				status: schema.refundRequest.status,
+				settlementStatus: schema.refundRequest.settlementStatus,
+				orderId: schema.courseOrder.id,
+				orderStatus: schema.courseOrder.status,
+				buyerId: schema.courseOrder.buyerId,
+				organizationId: schema.courseOrder.organizationId,
+				sellerNetInSen: schema.courseOrder.sellerNetInSen,
+			})
+			.from(schema.refundRequest)
+			.innerJoin(
+				schema.courseOrder,
+				eq(schema.refundRequest.orderId, schema.courseOrder.id),
+			)
+			.where(eq(schema.refundRequest.id, data.refundId))
+			.limit(1);
+		if (
+			!request ||
+			request.status !== "approved" ||
+			request.orderStatus !== "paid"
+		)
+			throw new Error("This refund is not ready for settlement.");
+		if (request.settlementStatus === "paid") return { status: "paid" as const };
+		const now = new Date();
+		if (data.status === "failed") {
+			await db
+				.update(schema.refundRequest)
+				.set({
+					settlementStatus: "failed",
+					settlementReference: data.reference,
+					resolutionNote: data.note || null,
+				})
+				.where(eq(schema.refundRequest.id, request.id));
+			return { status: "failed" as const };
+		}
+		const entitlements = await db
+			.select({ courseId: schema.orderEntitlement.courseId })
+			.from(schema.orderEntitlement)
+			.where(eq(schema.orderEntitlement.orderId, request.orderId));
+		await db.batch([
+			db
+				.update(schema.refundRequest)
+				.set({
+					settlementStatus: "paid",
+					settlementReference: data.reference,
+					settledAt: now,
+					resolutionNote: data.note || null,
+				})
+				.where(eq(schema.refundRequest.id, request.id)),
+			db
+				.update(schema.courseOrder)
+				.set({ status: "refunded", refundedAt: now, updatedAt: now })
+				.where(eq(schema.courseOrder.id, request.orderId)),
+			db
+				.update(schema.orderEntitlement)
+				.set({ status: "revoked", revokedAt: now })
+				.where(eq(schema.orderEntitlement.orderId, request.orderId)),
+			db
+				.insert(schema.creatorLedgerEntry)
+				.values({
+					id: crypto.randomUUID(),
+					organizationId: request.organizationId,
+					orderId: request.orderId,
+					type: "refund",
+					amountInSen: -request.sellerNetInSen,
+					description: `Refund for order ${request.orderId}`,
+				})
+				.onConflictDoNothing(),
+		]);
+		await reconcileCourseAccess(
+			request.buyerId,
+			entitlements.map((item) => item.courseId),
+			now,
+		);
+		await writeAudit({
+			actorId: session.user.id,
+			organizationId: request.organizationId,
+			action: "refund.settled",
+			resourceType: "refund_request",
+			resourceId: request.id,
+			metadata: { orderId: request.orderId, reference: data.reference },
+		});
+		return { status: "paid" as const };
 	});
