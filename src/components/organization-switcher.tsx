@@ -1,7 +1,11 @@
 "use client";
 
-import { useRouter } from "@tanstack/react-router";
-import { Building2Icon, ChevronsUpDownIcon } from "lucide-react";
+import { Link, useRouter } from "@tanstack/react-router";
+import {
+	BookOpenCheckIcon,
+	Building2Icon,
+	ChevronsUpDownIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -46,7 +50,29 @@ export function OrganizationSwitcher({
 		?.split(",")[0]
 		.replace(/^./, (character) => character.toUpperCase());
 
-	if (!activeOrganization) return null;
+	if (!activeOrganization) {
+		return (
+			<SidebarMenu>
+				<SidebarMenuItem>
+					<SidebarMenuButton
+						render={<Link to="/courses" />}
+						size="lg"
+						tooltip="DV LMS"
+					>
+						<div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+							<BookOpenCheckIcon className="size-4" aria-hidden="true" />
+						</div>
+						<div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+							<span className="truncate font-semibold">DV LMS</span>
+							<span className="truncate text-xs text-muted-foreground">
+								Learning marketplace
+							</span>
+						</div>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
+			</SidebarMenu>
+		);
+	}
 
 	async function setActiveOrganization(organizationId: string) {
 		if (organizationId === activeOrganization.id) return;
