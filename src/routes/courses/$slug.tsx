@@ -8,6 +8,7 @@ import {
 import {
 	BookOpenCheckIcon,
 	BookOpenIcon,
+	CheckCircle2Icon,
 	Clock3Icon,
 	Globe2Icon,
 	GraduationCapIcon,
@@ -122,6 +123,18 @@ function PublicCourseDetail() {
 						<p className="mt-4 text-lg leading-8 text-muted-foreground">
 							{course.summary}
 						</p>
+						{reviewData.count ? (
+							<a
+								href="#reviews"
+								className="mt-5 inline-flex items-center gap-2 text-sm font-medium hover:underline"
+							>
+								<Stars rating={Math.round(reviewData.average)} />
+								<span>{reviewData.average.toFixed(1)}</span>
+								<span className="text-muted-foreground">
+									({reviewData.count} verified reviews)
+								</span>
+							</a>
+						) : null}
 						<div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground">
 							<span className="flex items-center gap-2">
 								<GraduationCapIcon className="size-4" />
@@ -178,6 +191,21 @@ function PublicCourseDetail() {
 								offerId={course.defaultOfferId}
 								state={enrollmentState}
 							/>
+							<div className="space-y-2 border-t pt-4 text-sm">
+								<p className="font-medium">This course includes</p>
+								<p className="flex items-center gap-2 text-muted-foreground">
+									<CheckCircle2Icon className="size-4 text-primary" />
+									{course.lessonCount} structured lessons
+								</p>
+								<p className="flex items-center gap-2 text-muted-foreground">
+									<CheckCircle2Icon className="size-4 text-primary" />
+									Lifetime access to purchased content
+								</p>
+								<p className="flex items-center gap-2 text-muted-foreground">
+									<CheckCircle2Icon className="size-4 text-primary" />
+									Learn at your own pace
+								</p>
+							</div>
 						</CardContent>
 					</Card>
 				</div>
@@ -234,11 +262,13 @@ function PublicCourseDetail() {
 							))}
 						</div>
 					</section>
-					<CourseReviews
-						courseId={course.id}
-						data={reviewData}
-						myReview={myReview}
-					/>
+					<div id="reviews" className="scroll-mt-8">
+						<CourseReviews
+							courseId={course.id}
+							data={reviewData}
+							myReview={myReview}
+						/>
+					</div>
 				</div>
 				<aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
 					<Card>

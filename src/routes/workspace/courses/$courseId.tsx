@@ -8,12 +8,10 @@ import {
 	ArchiveIcon,
 	ArrowDownIcon,
 	ArrowLeftIcon,
+	ArrowRightIcon,
 	ArrowUpIcon,
 	BookOpenIcon,
-	CircleDollarSignIcon,
 	ExternalLinkIcon,
-	FileTextIcon,
-	Globe2Icon,
 	GripVerticalIcon,
 	Layers3Icon,
 	LoaderCircleIcon,
@@ -123,6 +121,9 @@ function newLesson() {
 	};
 }
 
+const editorSteps = ["basic", "pricing", "curriculum", "publish"] as const;
+type EditorStep = (typeof editorSteps)[number];
+
 function CourseEditor() {
 	const context = Route.useRouteContext();
 	const router = useRouter();
@@ -161,6 +162,14 @@ function CourseEditor() {
 		})),
 	);
 	const [busy, setBusy] = useState<string | null>(null);
+	const [activeStep, setActiveStep] = useState<EditorStep>("basic");
+	const activeStepIndex = editorSteps.indexOf(activeStep);
+	const completedSteps = {
+		basic: Boolean(title.trim() && summary.trim() && description.trim()),
+		pricing: Boolean(price !== "" && Number(price) >= 0),
+		curriculum: sections.some((section) => section.lessons.length > 0),
+		publish: course.status === "published",
+	};
 
 	function editorData() {
 		const priceNumber = Number(price || 0);
@@ -361,25 +370,37 @@ function CourseEditor() {
 							</div>
 						</div>
 
-						<Tabs defaultValue="basic" className="gap-5">
+						<Tabs
+							value={activeStep}
+							onValueChange={(value) => setActiveStep(value as EditorStep)}
+							className="gap-5"
+						>
 							<TabsList
 								variant="line"
 								className="w-full justify-start overflow-x-auto"
 							>
 								<TabsTrigger value="basic">
-									<FileTextIcon />
+									<span className="grid size-5 place-items-center rounded-full bg-muted text-[11px] font-semibold">
+										1
+									</span>
 									Basic information
 								</TabsTrigger>
 								<TabsTrigger value="pricing">
-									<CircleDollarSignIcon />
+									<span className="grid size-5 place-items-center rounded-full bg-muted text-[11px] font-semibold">
+										2
+									</span>
 									Pricing
 								</TabsTrigger>
 								<TabsTrigger value="curriculum">
-									<Layers3Icon />
+									<span className="grid size-5 place-items-center rounded-full bg-muted text-[11px] font-semibold">
+										3
+									</span>
 									Curriculum
 								</TabsTrigger>
 								<TabsTrigger value="publish">
-									<Globe2Icon />
+									<span className="grid size-5 place-items-center rounded-full bg-muted text-[11px] font-semibold">
+										4
+									</span>
 									Publish
 								</TabsTrigger>
 							</TabsList>
@@ -907,6 +928,36 @@ function CourseEditor() {
 									</CardContent>
 								</Card>
 							</TabsContent>
+							<div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+								<p className="text-sm text-muted-foreground">
+									{Object.values(completedSteps).filter(Boolean).length} of 4
+									steps complete
+								</p>
+								<div className="flex gap-2">
+									<Button
+										type="button"
+										variant="outline"
+										disabled={activeStepIndex === 0}
+										onClick={() =>
+											setActiveStep(editorSteps[activeStepIndex - 1])
+										}
+									>
+										<ArrowLeftIcon />
+										Previous
+									</Button>
+									{activeStepIndex < editorSteps.length - 1 ? (
+										<Button
+											type="button"
+											onClick={() =>
+												setActiveStep(editorSteps[activeStepIndex + 1])
+											}
+										>
+											Next
+											<ArrowRightIcon />
+										</Button>
+									) : null}
+								</div>
+							</div>
 						</Tabs>
 					</div>
 				</main>

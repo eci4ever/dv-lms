@@ -94,6 +94,17 @@ export function AppSidebar({
 }: AppSidebarProps) {
 	const isAdmin =
 		!isImpersonating && (user.role?.split(",").includes("admin") ?? false);
+	const isCreatorArea = [
+		"courses",
+		"customers",
+		"dashboard",
+		"payouts",
+		"products",
+		"reviews",
+		"sales",
+		"settings",
+		"storefront",
+	].includes(activeItem);
 
 	async function stopImpersonating() {
 		const result = await authClient.admin.stopImpersonating();
@@ -107,12 +118,32 @@ export function AppSidebar({
 	return (
 		<>
 			<Sidebar collapsible="icon" {...props}>
-				<SidebarHeader className="h-16 shrink-0 justify-center">
+				<SidebarHeader className="shrink-0 justify-center py-3">
 					<OrganizationSwitcher
 						organizations={organizations}
 						activeOrganizationId={activeOrganizationId}
 						organizationRole={organizationRole}
 					/>
+					{isOrganizationOwner ? (
+						<div className="grid grid-cols-2 gap-1 rounded-lg bg-sidebar-accent/60 p-1 group-data-[collapsible=icon]:hidden">
+							<Button
+								render={<Link to="/library" />}
+								variant={isCreatorArea ? "ghost" : "secondary"}
+								size="sm"
+								className="h-7 px-2 text-xs"
+							>
+								My learning
+							</Button>
+							<Button
+								render={<Link to="/workspace/courses" />}
+								variant={isCreatorArea ? "secondary" : "ghost"}
+								size="sm"
+								className="h-7 px-2 text-xs"
+							>
+								Creator
+							</Button>
+						</div>
+					) : null}
 				</SidebarHeader>
 				<SidebarContent>
 					<SidebarGroup>
