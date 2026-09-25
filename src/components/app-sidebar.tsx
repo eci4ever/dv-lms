@@ -1,6 +1,5 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import {
-	ArrowLeftIcon,
 	BookOpenIcon,
 	Building2Icon,
 	CreditCardIcon,
@@ -17,7 +16,7 @@ import {
 	StoreIcon,
 	UsersRoundIcon,
 } from "lucide-react";
-import * as React from "react";
+import type * as React from "react";
 import { toast } from "sonner";
 
 import { NavUser } from "@/components/nav-user";
@@ -83,8 +82,6 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "users";
 }
 
-type SidebarView = "main" | "platform-admin";
-
 export function AppSidebar({
 	user,
 	organizations,
@@ -97,17 +94,6 @@ export function AppSidebar({
 }: AppSidebarProps) {
 	const isAdmin =
 		!isImpersonating && (user.role?.split(",").includes("admin") ?? false);
-	const pathname = useRouterState({
-		select: (state) => state.location.pathname,
-	});
-	const isPlatformAdminPage = pathname.startsWith("/admin");
-	const [view, setView] = React.useState<SidebarView>(() =>
-		isPlatformAdminPage ? "platform-admin" : "main",
-	);
-
-	React.useEffect(() => {
-		setView(isPlatformAdminPage ? "platform-admin" : "main");
-	}, [isPlatformAdminPage]);
 
 	async function stopImpersonating() {
 		const result = await authClient.admin.stopImpersonating();
@@ -129,205 +115,297 @@ export function AppSidebar({
 					/>
 				</SidebarHeader>
 				<SidebarContent>
-					{view === "main" ? (
-						<>
-							<SidebarGroup>
-								<SidebarGroupLabel>Main</SidebarGroupLabel>
-								<SidebarGroupContent>
-									<SidebarMenu>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/dashboard">
-														<LayoutDashboardIcon />
-														<span>Dashboard</span>
-													</Link>
-												}
-												isActive={activeItem === "dashboard"}
-												tooltip="Dashboard"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/purchases">
-														<CreditCardIcon />
-														<span>Purchases</span>
-													</Link>
-												}
-												isActive={activeItem === "purchases"}
-												tooltip="Purchases"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/library">
-														<BookOpenIcon />
-														<span>Library</span>
-													</Link>
-												}
-												isActive={
-													activeItem === "library" || activeItem === "learning"
-												}
-												tooltip="Library"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/memberships">
-														<CreditCardIcon />
-														<span>Memberships</span>
-													</Link>
-												}
-												isActive={activeItem === "memberships"}
-												tooltip="Memberships"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/courses">
-														<LibraryIcon />
-														<span>Marketplace</span>
-													</Link>
-												}
-												tooltip="Marketplace"
-											/>
-										</SidebarMenuItem>
-									</SidebarMenu>
-								</SidebarGroupContent>
-							</SidebarGroup>
-							<SidebarGroup>
-								<SidebarGroupLabel>Workspace</SidebarGroupLabel>
-								<SidebarGroupContent>
-									<SidebarMenu>
-										{isOrganizationOwner ? (
-											<SidebarMenuItem>
-												<SidebarMenuButton
-													render={
-														<Link to="/workspace/payouts">
-															<LandmarkIcon />
-															<span>Payouts</span>
-														</Link>
-													}
-													isActive={activeItem === "payouts"}
-													tooltip="Payouts"
-												/>
-											</SidebarMenuItem>
-										) : null}
-										{isOrganizationOwner ? (
-											<SidebarMenuItem>
-												<SidebarMenuButton
-													render={
-														<Link to="/workspace/reviews">
-															<MessageSquareMoreIcon />
-															<span>Reviews</span>
-														</Link>
-													}
-													isActive={activeItem === "reviews"}
-													tooltip="Reviews"
-												/>
-											</SidebarMenuItem>
-										) : null}
-										{isOrganizationOwner ? (
-											<SidebarMenuItem>
-												<SidebarMenuButton
-													render={
-														<Link to="/workspace/storefront">
-															<StoreIcon />
-															<span>Storefront</span>
-														</Link>
-													}
-													isActive={activeItem === "storefront"}
-													tooltip="Storefront"
-												/>
-											</SidebarMenuItem>
-										) : null}
-										{isOrganizationOwner ? (
-											<SidebarMenuItem>
-												<SidebarMenuButton
-													render={
-														<Link to="/workspace/products">
-															<Layers3Icon />
-															<span>Products</span>
-														</Link>
-													}
-													isActive={activeItem === "products"}
-													tooltip="Products"
-												/>
-											</SidebarMenuItem>
-										) : null}
-										{isOrganizationOwner ? (
-											<SidebarMenuItem>
-												<SidebarMenuButton
-													render={
-														<Link to="/workspace/customers">
-															<UsersRoundIcon />
-															<span>Customers</span>
-														</Link>
-													}
-													isActive={activeItem === "customers"}
-													tooltip="Customers"
-												/>
-											</SidebarMenuItem>
-										) : null}
-										{isOrganizationOwner ? (
-											<SidebarMenuItem>
-												<SidebarMenuButton
-													render={
-														<Link to="/workspace/sales">
-															<CreditCardIcon />
-															<span>Sales</span>
-														</Link>
-													}
-													isActive={activeItem === "sales"}
-													tooltip="Sales"
-												/>
-											</SidebarMenuItem>
-										) : null}
-										{isOrganizationOwner ? (
-											<SidebarMenuItem>
-												<SidebarMenuButton
-													render={
-														<Link to="/workspace/settings">
-															<Settings2Icon />
-															<span>Settings</span>
-														</Link>
-													}
-													isActive={activeItem === "settings"}
-													tooltip="Settings"
-												/>
-											</SidebarMenuItem>
-										) : null}
-									</SidebarMenu>
-								</SidebarGroupContent>
-							</SidebarGroup>
-							{isAdmin ? (
-								<SidebarGroup>
-									<SidebarGroupLabel>Administration</SidebarGroupLabel>
-									<SidebarGroupContent>
-										<SidebarMenu>
-											<SidebarMenuItem>
-												<SidebarMenuButton
-													type="button"
-													tooltip="Platform Admin"
-													onClick={() => setView("platform-admin")}
-												>
-													<ShieldCheckIcon />
-													<span>Platform Admin</span>
-												</SidebarMenuButton>
-											</SidebarMenuItem>
-										</SidebarMenu>
-									</SidebarGroupContent>
-								</SidebarGroup>
-							) : null}
-						</>
-					) : (
-						<>
-							<SidebarGroup>
+					<SidebarGroup>
+						<SidebarGroupLabel>Main</SidebarGroupLabel>
+						<SidebarGroupContent>
+							<SidebarMenu>
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										render={
+											<Link to="/dashboard">
+												<LayoutDashboardIcon />
+												<span>Dashboard</span>
+											</Link>
+										}
+										isActive={activeItem === "dashboard"}
+										tooltip="Dashboard"
+									/>
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										render={
+											<Link to="/purchases">
+												<CreditCardIcon />
+												<span>Purchases</span>
+											</Link>
+										}
+										isActive={activeItem === "purchases"}
+										tooltip="Purchases"
+									/>
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										render={
+											<Link to="/library">
+												<BookOpenIcon />
+												<span>Library</span>
+											</Link>
+										}
+										isActive={
+											activeItem === "library" || activeItem === "learning"
+										}
+										tooltip="Library"
+									/>
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										render={
+											<Link to="/memberships">
+												<CreditCardIcon />
+												<span>Memberships</span>
+											</Link>
+										}
+										isActive={activeItem === "memberships"}
+										tooltip="Memberships"
+									/>
+								</SidebarMenuItem>
+								<SidebarMenuItem>
+									<SidebarMenuButton
+										render={
+											<Link to="/courses">
+												<LibraryIcon />
+												<span>Marketplace</span>
+											</Link>
+										}
+										tooltip="Marketplace"
+									/>
+								</SidebarMenuItem>
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+					<SidebarGroup>
+						<SidebarGroupLabel>Workspace</SidebarGroupLabel>
+						<SidebarGroupContent>
+							<SidebarMenu>
+								{isOrganizationOwner ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/payouts">
+													<LandmarkIcon />
+													<span>Payouts</span>
+												</Link>
+											}
+											isActive={activeItem === "payouts"}
+											tooltip="Payouts"
+										/>
+									</SidebarMenuItem>
+								) : null}
+								{isOrganizationOwner ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/reviews">
+													<MessageSquareMoreIcon />
+													<span>Reviews</span>
+												</Link>
+											}
+											isActive={activeItem === "reviews"}
+											tooltip="Reviews"
+										/>
+									</SidebarMenuItem>
+								) : null}
+								{isOrganizationOwner ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/storefront">
+													<StoreIcon />
+													<span>Storefront</span>
+												</Link>
+											}
+											isActive={activeItem === "storefront"}
+											tooltip="Storefront"
+										/>
+									</SidebarMenuItem>
+								) : null}
+								{isOrganizationOwner ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/courses">
+													<BookOpenIcon />
+													<span>Courses</span>
+												</Link>
+											}
+											isActive={activeItem === "courses"}
+											tooltip="Courses"
+										/>
+									</SidebarMenuItem>
+								) : null}
+								{isOrganizationOwner ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/products">
+													<Layers3Icon />
+													<span>Products</span>
+												</Link>
+											}
+											isActive={activeItem === "products"}
+											tooltip="Products"
+										/>
+									</SidebarMenuItem>
+								) : null}
+								{isOrganizationOwner ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/customers">
+													<UsersRoundIcon />
+													<span>Customers</span>
+												</Link>
+											}
+											isActive={activeItem === "customers"}
+											tooltip="Customers"
+										/>
+									</SidebarMenuItem>
+								) : null}
+								{isOrganizationOwner ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/sales">
+													<CreditCardIcon />
+													<span>Sales</span>
+												</Link>
+											}
+											isActive={activeItem === "sales"}
+											tooltip="Sales"
+										/>
+									</SidebarMenuItem>
+								) : null}
+								{isOrganizationOwner ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/workspace/settings">
+													<Settings2Icon />
+													<span>Settings</span>
+												</Link>
+											}
+											isActive={activeItem === "settings"}
+											tooltip="Settings"
+										/>
+									</SidebarMenuItem>
+								) : null}
+							</SidebarMenu>
+						</SidebarGroupContent>
+					</SidebarGroup>
+					{isAdmin ? (
+						<SidebarGroup>
+							<SidebarGroupLabel>Platform Admin</SidebarGroupLabel>
+							<SidebarGroupContent>
 								<SidebarMenu>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin" search={{ days: 30 }}>
+													<GaugeIcon />
+													<span>Overview</span>
+												</Link>
+											}
+											isActive={activeItem === "admin-overview"}
+											tooltip="Platform overview"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link
+													to="/admin/creators"
+													search={{ query: "", status: "" }}
+												>
+													<StoreIcon />
+													<span>Creators</span>
+												</Link>
+											}
+											isActive={activeItem === "creators"}
+											tooltip="Creator approvals"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/content">
+													<Layers3Icon />
+													<span>Content</span>
+												</Link>
+											}
+											isActive={activeItem === "content"}
+											tooltip="Content moderation"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/categories">
+													<LibraryIcon />
+													<span>Categories</span>
+												</Link>
+											}
+											isActive={activeItem === "categories"}
+											tooltip="Marketplace categories"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/users">
+													<UsersRoundIcon />
+													<span>Users</span>
+												</Link>
+											}
+											isActive={activeItem === "users"}
+											tooltip="Users"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/organizations">
+													<Building2Icon />
+													<span>Organizations</span>
+												</Link>
+											}
+											isActive={activeItem === "organizations"}
+											tooltip="Organizations"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/orders">
+													<CreditCardIcon />
+													<span>Orders</span>
+												</Link>
+											}
+											isActive={activeItem === "orders"}
+											tooltip="Orders"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/payouts">
+													<LandmarkIcon />
+													<span>Payouts</span>
+												</Link>
+											}
+											isActive={activeItem === "admin-payouts"}
+											tooltip="Creator payouts"
+										/>
+									</SidebarMenuItem>
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											render={
@@ -342,151 +420,35 @@ export function AppSidebar({
 									</SidebarMenuItem>
 									<SidebarMenuItem>
 										<SidebarMenuButton
-											type="button"
-											tooltip="Back to main"
-											onClick={() => setView("main")}
-										>
-											<ArrowLeftIcon />
-											<span>Back to main</span>
-										</SidebarMenuButton>
+											render={
+												<Link
+													to="/admin/audit-log"
+													search={{ query: "", action: "" }}
+												>
+													<ScrollTextIcon />
+													<span>Audit Log</span>
+												</Link>
+											}
+											isActive={activeItem === "audit-log"}
+											tooltip="Audit log"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/settings">
+													<SlidersHorizontalIcon />
+													<span>Settings</span>
+												</Link>
+											}
+											isActive={activeItem === "admin-settings"}
+											tooltip="Platform settings"
+										/>
 									</SidebarMenuItem>
 								</SidebarMenu>
-							</SidebarGroup>
-							<SidebarGroup>
-								<SidebarGroupLabel>Platform Admin</SidebarGroupLabel>
-								<SidebarGroupContent>
-									<SidebarMenu>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/admin" search={{ days: 30 }}>
-														<GaugeIcon />
-														<span>Overview</span>
-													</Link>
-												}
-												isActive={activeItem === "admin-overview"}
-												tooltip="Platform overview"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link
-														to="/admin/creators"
-														search={{ query: "", status: "" }}
-													>
-														<StoreIcon />
-														<span>Creators</span>
-													</Link>
-												}
-												isActive={activeItem === "creators"}
-												tooltip="Creator approvals"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/admin/content">
-														<Layers3Icon />
-														<span>Content</span>
-													</Link>
-												}
-												isActive={activeItem === "content"}
-												tooltip="Content moderation"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/admin/categories">
-														<LibraryIcon />
-														<span>Categories</span>
-													</Link>
-												}
-												isActive={activeItem === "categories"}
-												tooltip="Marketplace categories"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/admin/users">
-														<UsersRoundIcon />
-														<span>Users</span>
-													</Link>
-												}
-												isActive={activeItem === "users"}
-												tooltip="Users"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/admin/organizations">
-														<Building2Icon />
-														<span>Organizations</span>
-													</Link>
-												}
-												isActive={activeItem === "organizations"}
-												tooltip="Organizations"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/admin/orders">
-														<CreditCardIcon />
-														<span>Orders</span>
-													</Link>
-												}
-												isActive={activeItem === "orders"}
-												tooltip="Orders"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/admin/payouts">
-														<LandmarkIcon />
-														<span>Payouts</span>
-													</Link>
-												}
-												isActive={activeItem === "admin-payouts"}
-												tooltip="Creator payouts"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link
-														to="/admin/audit-log"
-														search={{ query: "", action: "" }}
-													>
-														<ScrollTextIcon />
-														<span>Audit Log</span>
-													</Link>
-												}
-												isActive={activeItem === "audit-log"}
-												tooltip="Audit log"
-											/>
-										</SidebarMenuItem>
-										<SidebarMenuItem>
-											<SidebarMenuButton
-												render={
-													<Link to="/admin/settings">
-														<SlidersHorizontalIcon />
-														<span>Settings</span>
-													</Link>
-												}
-												isActive={activeItem === "admin-settings"}
-												tooltip="Platform settings"
-											/>
-										</SidebarMenuItem>
-									</SidebarMenu>
-								</SidebarGroupContent>
-							</SidebarGroup>
-						</>
-					)}
+							</SidebarGroupContent>
+						</SidebarGroup>
+					) : null}
 				</SidebarContent>
 				<SidebarFooter>
 					<NavUser
