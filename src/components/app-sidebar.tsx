@@ -112,7 +112,7 @@ export function AppSidebar({
 			toast.error(result.error.message ?? "Unable to end impersonation.");
 			return;
 		}
-		window.location.assign("/dashboard");
+		window.location.assign("/admin/users");
 	}
 
 	return (

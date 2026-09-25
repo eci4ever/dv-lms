@@ -1,12 +1,7 @@
 "use client";
 
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-	ChevronsUpDownIcon,
-	LogOutIcon,
-	ShieldCheckIcon,
-	UserRoundCogIcon,
-} from "lucide-react";
+import { ChevronsUpDownIcon, LogOutIcon, UserRoundCogIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +26,6 @@ import { formatRole } from "@/lib/organization-permissions";
 export function NavUser({
 	user,
 	organizationRole,
-	isImpersonating,
 }: {
 	user: {
 		name: string;
@@ -67,45 +61,14 @@ export function NavUser({
 		await navigate({ to: "/" });
 	}
 
-	async function stopImpersonating() {
-		const result = await authClient.admin.stopImpersonating();
-		if (result.error) {
-			toast.error(result.error.message ?? "Unable to end impersonation.");
-			return;
-		}
-		window.location.assign("/dashboard");
-	}
-
 	return (
 		<SidebarMenu>
-			{isImpersonating ? (
-				<SidebarMenuItem>
-					<SidebarMenuButton
-						type="button"
-						className="bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive"
-						tooltip="Return to platform admin"
-						onClick={stopImpersonating}
-					>
-						<ShieldCheckIcon />
-						<span>Return to admin</span>
-					</SidebarMenuButton>
-				</SidebarMenuItem>
-			) : null}
 			<SidebarMenuItem>
 				<DropdownMenu>
 					<DropdownMenuTrigger
-						aria-label={
-							isImpersonating ? "Open impersonated user menu" : "Open user menu"
-						}
+						aria-label="Open user menu"
 						render={
-							<SidebarMenuButton
-								size="lg"
-								className={
-									isImpersonating
-										? "bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive aria-expanded:bg-destructive/15"
-										: "aria-expanded:bg-muted"
-								}
-							/>
+							<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
 						}
 					>
 						<Avatar>
@@ -156,9 +119,6 @@ export function NavUser({
 											{user.email}
 										</span>
 										<div className="mt-1 flex flex-wrap gap-1">
-											{isImpersonating ? (
-												<Badge variant="destructive">Impersonating</Badge>
-											) : null}
 											<Badge variant="outline">
 												Platform: {platformRoleLabel}
 											</Badge>
@@ -180,15 +140,6 @@ export function NavUser({
 							</DropdownMenuItem>
 						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
-						{isImpersonating ? (
-							<>
-								<DropdownMenuItem onClick={stopImpersonating}>
-									<ShieldCheckIcon />
-									Return to admin
-								</DropdownMenuItem>
-								<DropdownMenuSeparator />
-							</>
-						) : null}
 						<DropdownMenuItem onClick={signOut}>
 							<LogOutIcon />
 							Log out
