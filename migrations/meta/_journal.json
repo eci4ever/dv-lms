@@ -85,6 +85,13 @@
       "when": 1790391731518,
       "tag": "0011_wild_leech",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1790644681973,
+      "tag": "0012_simplify_seed_catalog",
+      "breakpoints": true
     }
   ]
 }

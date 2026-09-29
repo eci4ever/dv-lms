@@ -1,12 +1,7 @@
 export const courseCategories = [
-	{ value: "development", label: "Development" },
-	{ value: "design", label: "Design" },
-	{ value: "business", label: "Business" },
-	{ value: "data-analytics", label: "Data & Analytics" },
-	{ value: "it-software", label: "IT & Software" },
-	{ value: "health-wellness", label: "Health & Wellness" },
-	{ value: "languages", label: "Languages" },
-	{ value: "personal-growth", label: "Personal Growth" },
+	{ value: "it-network", label: "IT & Network" },
+	{ value: "system-administration", label: "System Administration" },
+	{ value: "programming", label: "Programming" },
 ] as const;
 
 export const courseLevels = [
