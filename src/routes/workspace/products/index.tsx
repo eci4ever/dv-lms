@@ -214,7 +214,9 @@ function Products() {
 							</div>
 						</div>
 						<DialogFooter>
-							<Button disabled={busy}>Create</Button>
+							<Button type="submit" disabled={busy}>
+								Create
+							</Button>
 						</DialogFooter>
 					</form>
 				</DialogContent>
