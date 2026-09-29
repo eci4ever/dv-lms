@@ -62,6 +62,7 @@ function ProductEditor() {
 	const initial = context.product;
 	const router = useRouter();
 	const [form, setForm] = useState({
+		id: initial.id,
 		type: initial.type as ProductType,
 		slug: initial.slug,
 		name: initial.name,
