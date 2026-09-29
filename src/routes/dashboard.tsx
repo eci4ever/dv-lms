@@ -76,7 +76,7 @@ export const Route = createFileRoute("/dashboard")({
 		return data;
 	},
 	loader: async ({ context, deps }) =>
-		context.isOrganizationOwner
+		context.canManageOrganization
 			? {
 					kind: "creator" as const,
 					data: await getCreatorDashboard({ data: { days: deps.days } }),

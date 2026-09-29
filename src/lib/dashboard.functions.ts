@@ -41,8 +41,8 @@ async function requireOwner() {
 	const role = organization?.members.find(
 		(item) => item.userId === session.user.id,
 	)?.role;
-	if (!role?.split(",").includes("owner"))
-		throw new Error("Organization owner access is required.");
+	if (!role?.split(",").some((value) => value === "owner" || value === "admin"))
+		throw new Error("Organization administrator access is required.");
 	return { organizationId, organizationName: organization.name };
 }
 async function requireSession() {

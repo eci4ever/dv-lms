@@ -78,6 +78,13 @@
       "when": 1790128142101,
       "tag": "0010_silly_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1790391731518,
+      "tag": "0011_wild_leech",
+      "breakpoints": true
     }
   ]
 }

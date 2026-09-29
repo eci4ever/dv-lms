@@ -98,9 +98,7 @@ function roleLabel(role?: string | null) {
 const organizationRoleOptions = [
 	{ value: "owner", label: "Owner" },
 	{ value: "admin", label: "Admin" },
-	{ value: "instructor", label: "Instructor" },
-	{ value: "course_manager", label: "Course Manager" },
-	{ value: "student", label: "Student" },
+	{ value: "member", label: "Member" },
 ] as const satisfies ReadonlyArray<{
 	value: AssignableOrganizationRole;
 	label: string;
@@ -165,7 +163,7 @@ function UserManagement() {
 		email: "",
 		password: "",
 		organizationId: activeOrganizationId ?? organizations[0]?.id ?? "",
-		organizationRole: "instructor" as AssignableOrganizationRole,
+		organizationRole: "member" as AssignableOrganizationRole,
 	});
 	const [riskAction, setRiskAction] = useState<RiskAction | null>(null);
 	const organizationOptions = useMemo(
@@ -404,7 +402,7 @@ function UserManagement() {
 				email: "",
 				password: "",
 				organizationId: activeOrganizationId ?? organizations[0]?.id ?? "",
-				organizationRole: "instructor",
+				organizationRole: "member",
 			});
 			setShowCreateUser(false);
 			setSearch("");

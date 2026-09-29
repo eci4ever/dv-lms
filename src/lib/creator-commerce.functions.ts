@@ -13,6 +13,7 @@ import {
 	type ProductType,
 	productTypes,
 } from "@/lib/creator-commerce-types";
+import { requireOrganizationPlanCapacity } from "@/lib/organization-plan.server";
 import { requireApprovedCreator } from "@/lib/platform.server";
 
 const db = drizzle(env.DB, { schema });
@@ -72,8 +73,10 @@ async function ownerContext() {
 	const role = organization?.members.find(
 		(item) => item.userId === session.user.id,
 	)?.role;
-	if (!role?.split(",").includes("owner")) {
-		throw new Error("Organization owner access is required.");
+	if (
+		!role?.split(",").some((value) => value === "owner" || value === "admin")
+	) {
+		throw new Error("Organization administrator access is required.");
 	}
 	return { session, activeOrganizationId, organization };
 }
@@ -477,6 +480,7 @@ export const setProductStatus = createServerFn({ method: "POST" })
 			(product.status === "archived" && data.status === "draft");
 		if (!allowed) throw new Error("Invalid product status transition.");
 		if (data.status === "published") {
+			await requireOrganizationPlanCapacity(product.organizationId, "products");
 			if (!product.summary || !product.description || !product.imageUrl)
 				throw new Error(
 					"Add summary, description and image before publishing.",

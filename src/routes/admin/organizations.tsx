@@ -166,13 +166,7 @@ function RolePicker({
 					}
 				>
 					<DropdownMenuRadioItem value="admin">Admin</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="instructor">
-						Instructor
-					</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="course_manager">
-						Course Manager
-					</DropdownMenuRadioItem>
-					<DropdownMenuRadioItem value="student">Student</DropdownMenuRadioItem>
+					<DropdownMenuRadioItem value="member">Member</DropdownMenuRadioItem>
 				</DropdownMenuRadioGroup>
 			</DropdownMenuContent>
 		</DropdownMenu>
@@ -215,7 +209,7 @@ function OrganizationManagement() {
 	const [isSearchingUsers, setIsSearchingUsers] = useState(false);
 	const availableUsersRequest = useRef(0);
 	const [newMemberRole, setNewMemberRole] =
-		useState<OrganizationMemberRole>("student");
+		useState<OrganizationMemberRole>("member");
 
 	const [memberRiskAction, setMemberRiskAction] =
 		useState<MemberRiskAction | null>(null);
@@ -288,7 +282,7 @@ function OrganizationManagement() {
 			setDetails(null);
 			setMemberSearch("");
 			setAvailableUsers([]);
-			setNewMemberRole("student");
+			setNewMemberRole("member");
 			setIsManageOpen(true);
 			setIsDetailsLoading(true);
 

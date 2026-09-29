@@ -1,12 +1,18 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
 import {
-	CircleGaugeIcon,
+	createFileRoute,
+	Link,
+	redirect,
+	useRouter,
+} from "@tanstack/react-router";
+import {
 	CreditCardIcon,
 	Settings2Icon,
 	ShieldCheckIcon,
 	Trash2Icon,
 	UsersRoundIcon,
 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { AppSidebar } from "@/components/app-sidebar";
 import {
@@ -22,6 +28,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
 	SidebarInset,
@@ -30,6 +44,10 @@ import {
 } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getDashboardSession } from "@/lib/auth.functions";
+import {
+	inviteOrganizationMember,
+	updateOrganizationMemberRole,
+} from "@/lib/organization-members.functions";
 
 export const Route = createFileRoute("/workspace/settings")({
 	beforeLoad: async () => {
@@ -39,7 +57,7 @@ export const Route = createFileRoute("/workspace/settings")({
 			throw redirect({ to: "/login" });
 		}
 
-		if (!dashboard.isOrganizationOwner) {
+		if (!dashboard.canManageOrganization) {
 			throw redirect({ to: "/dashboard" });
 		}
 
@@ -56,24 +74,18 @@ const roles = [
 	},
 	{
 		name: "Admin",
-		description: "Manage members, invitations, enrollments, and sales reports.",
-	},
-	{
-		name: "Instructor",
-		description: "Teach assigned courses, manage learners, and view analytics.",
-	},
-	{
-		name: "Course Manager",
 		description:
-			"Review the organization's course catalog and support course operations.",
+			"Run courses, products, customers, reviews, and sales for the organization.",
 	},
 	{
-		name: "Student",
-		description: "Access assigned courses and view their own enrollments.",
+		name: "Member",
+		description:
+			"Belong to the organization without organization management access.",
 	},
 ];
 
 function WorkspaceSettings() {
+	const router = useRouter();
 	const {
 		session,
 		organization,
@@ -83,6 +95,42 @@ function WorkspaceSettings() {
 		organizationRole,
 	} = Route.useRouteContext();
 	const organizationName = organization?.name ?? "Your workspace";
+	const [inviteEmail, setInviteEmail] = useState("");
+	const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
+	const [busy, setBusy] = useState(false);
+
+	async function invite(event: React.FormEvent<HTMLFormElement>) {
+		event.preventDefault();
+		setBusy(true);
+		try {
+			await inviteOrganizationMember({
+				data: { email: inviteEmail, role: inviteRole },
+			});
+			setInviteEmail("");
+			toast.success("Invitation sent.");
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Unable to send invitation.",
+			);
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	async function changeRole(memberId: string, role: "admin" | "member") {
+		setBusy(true);
+		try {
+			await updateOrganizationMemberRole({ data: { memberId, role } });
+			toast.success("Member role updated.");
+			await router.invalidate({ sync: true });
+		} catch (error) {
+			toast.error(
+				error instanceof Error ? error.message : "Unable to update member.",
+			);
+		} finally {
+			setBusy(false);
+		}
+	}
 
 	return (
 		<SidebarProvider>
@@ -144,92 +192,143 @@ function WorkspaceSettings() {
 							</TabsList>
 
 							<TabsContent value="roles">
-								<section className="overflow-hidden rounded-xl border bg-card">
-									<div className="flex items-start gap-3 border-b p-5 sm:p-6">
-										<div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-											<UsersRoundIcon className="size-4" />
+								<div className="space-y-4">
+									<section className="overflow-hidden rounded-xl border bg-card">
+										<div className="flex items-start gap-3 border-b p-5 sm:p-6">
+											<div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
+												<UsersRoundIcon className="size-4" />
+											</div>
+											<div className="space-y-1">
+												<h2 className="font-medium">Workspace access</h2>
+												<p className="text-sm leading-6 text-muted-foreground">
+													Roles determine what members can manage in this
+													workspace.
+												</p>
+											</div>
 										</div>
-										<div className="space-y-1">
-											<h2 className="font-medium">Workspace access</h2>
-											<p className="text-sm leading-6 text-muted-foreground">
-												Roles determine what members can manage in this
-												workspace.
+										<div className="divide-y">
+											{roles.map((role) => (
+												<div
+													key={role.name}
+													className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+												>
+													<div className="space-y-1">
+														<div className="flex items-center gap-2">
+															<p className="font-medium">{role.name}</p>
+															{role.badge ? (
+																<Badge variant="secondary">{role.badge}</Badge>
+															) : null}
+														</div>
+														<p className="text-sm leading-6 text-muted-foreground">
+															{role.description}
+														</p>
+													</div>
+												</div>
+											))}
+										</div>
+									</section>
+									<section className="rounded-xl border bg-card p-5 sm:p-6">
+										<div className="mb-4">
+											<h2 className="font-medium">Team members</h2>
+											<p className="text-sm text-muted-foreground">
+												Invite admins or members using Better Auth organization
+												roles.
 											</p>
 										</div>
-									</div>
-									<div className="divide-y">
-										{roles.map((role) => (
-											<div
-												key={role.name}
-												className="flex flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+										<form
+											onSubmit={invite}
+											className="mb-5 grid gap-3 sm:grid-cols-[1fr_150px_auto]"
+										>
+											<Input
+												type="email"
+												placeholder="member@example.com"
+												value={inviteEmail}
+												onChange={(event) => setInviteEmail(event.target.value)}
+												required
+											/>
+											<Select
+												value={inviteRole}
+												onValueChange={(value) => {
+													if (value === "admin" || value === "member")
+														setInviteRole(value);
+												}}
 											>
-												<div className="space-y-1">
-													<div className="flex items-center gap-2">
-														<p className="font-medium">{role.name}</p>
-														{role.badge ? (
-															<Badge variant="secondary">{role.badge}</Badge>
-														) : null}
+												<SelectTrigger className="w-full">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="admin">Admin</SelectItem>
+													<SelectItem value="member">Member</SelectItem>
+												</SelectContent>
+											</Select>
+											<Button disabled={busy}>Send invite</Button>
+										</form>
+										<div className="divide-y rounded-lg border">
+											{organization?.members.map((member) => {
+												const isOwner = member.role
+													.split(",")
+													.includes("owner");
+												return (
+													<div
+														key={member.id}
+														className="flex items-center justify-between gap-4 p-3"
+													>
+														<div className="min-w-0">
+															<p className="truncate text-sm font-medium">
+																{member.user.name}
+															</p>
+															<p className="truncate text-xs text-muted-foreground">
+																{member.user.email}
+															</p>
+														</div>
+														{isOwner ? (
+															<Badge>Owner</Badge>
+														) : (
+															<Select
+																value={
+																	member.role === "admin" ? "admin" : "member"
+																}
+																disabled={busy}
+																onValueChange={(value) => {
+																	if (value === "admin" || value === "member")
+																		void changeRole(member.id, value);
+																}}
+															>
+																<SelectTrigger className="w-32">
+																	<SelectValue />
+																</SelectTrigger>
+																<SelectContent>
+																	<SelectItem value="admin">Admin</SelectItem>
+																	<SelectItem value="member">Member</SelectItem>
+																</SelectContent>
+															</Select>
+														)}
 													</div>
-													<p className="text-sm leading-6 text-muted-foreground">
-														{role.description}
-													</p>
-												</div>
-											</div>
-										))}
-									</div>
-								</section>
+												);
+											})}
+										</div>
+									</section>
+								</div>
 							</TabsContent>
 
 							<TabsContent value="billing">
-								<div className="grid gap-4 lg:grid-cols-2">
-									<section className="rounded-xl border bg-card p-5 sm:p-6">
-										<div className="flex items-start justify-between gap-4">
-											<div className="space-y-1">
-												<p className="font-medium">Current plan</p>
-												<p className="text-sm text-muted-foreground">
-													For small learning groups getting started.
-												</p>
-											</div>
-											<Badge variant="secondary">Starter</Badge>
-										</div>
-										<Separator className="my-5" />
-										<dl className="grid gap-3 text-sm">
-											<div className="flex items-center justify-between gap-4">
-												<dt className="text-muted-foreground">Monthly price</dt>
-												<dd className="font-medium">RM 0</dd>
-											</div>
-											<div className="flex items-center justify-between gap-4">
-												<dt className="text-muted-foreground">Billing cycle</dt>
-												<dd className="font-medium">Monthly</dd>
-											</div>
-										</dl>
-									</section>
-
-									<section className="rounded-xl border bg-card p-5 sm:p-6">
-										<div className="flex items-start gap-3">
-											<div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-												<CircleGaugeIcon className="size-4" />
-											</div>
-											<div>
-												<p className="font-medium">Current usage</p>
-												<p className="text-sm text-muted-foreground">
-													This billing period
-												</p>
-											</div>
-										</div>
-										<Separator className="my-5" />
-										<dl className="grid gap-3 text-sm">
-											<div className="flex items-center justify-between gap-4">
-												<dt className="text-muted-foreground">Members</dt>
-												<dd className="font-medium">1 of 10</dd>
-											</div>
-											<div className="flex items-center justify-between gap-4">
-												<dt className="text-muted-foreground">Courses</dt>
-												<dd className="font-medium">0 of 25</dd>
-											</div>
-										</dl>
-									</section>
-								</div>
+								<section className="flex flex-col gap-4 rounded-xl border bg-card p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+									<div className="space-y-1">
+										<p className="font-medium">Billing and usage</p>
+										<p className="text-sm text-muted-foreground">
+											View the current plan, resource usage, limits, and billing
+											cycle.
+										</p>
+									</div>
+									{isOrganizationOwner ? (
+										<Button render={<Link to="/workspace/billing" />}>
+											<CreditCardIcon />
+											Manage plan
+										</Button>
+									) : (
+										<Badge variant="secondary">Owner managed</Badge>
+									)}
+								</section>
 							</TabsContent>
 
 							<TabsContent value="danger">

@@ -24,12 +24,7 @@ const organizationSortFields = [
 	"memberCount",
 	"createdAt",
 ] as const;
-const memberRoles = [
-	"admin",
-	"instructor",
-	"course_manager",
-	"student",
-] as const;
+const memberRoles = ["admin", "member"] as const;
 
 export type OrganizationSortField = (typeof organizationSortFields)[number];
 export type OrganizationMemberRole = (typeof memberRoles)[number];

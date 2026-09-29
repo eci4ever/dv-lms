@@ -70,7 +70,7 @@ export const Route = createFileRoute("/workspace/courses/")({
 	beforeLoad: async () => {
 		const dashboard = await getDashboardSession();
 		if (!dashboard) throw redirect({ to: "/login" });
-		if (!dashboard.isOrganizationOwner) throw redirect({ to: "/dashboard" });
+		if (!dashboard.canManageOrganization) throw redirect({ to: "/dashboard" });
 		const courses = await listWorkspaceCourses();
 		return { ...dashboard, initialCourses: courses };
 	},

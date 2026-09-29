@@ -47,7 +47,7 @@ export const Route = createFileRoute("/workspace/products/$productId")({
 	beforeLoad: async ({ params }) => {
 		const dashboard = await getDashboardSession();
 		if (!dashboard) throw redirect({ to: "/login" });
-		if (!dashboard.isOrganizationOwner) throw redirect({ to: "/dashboard" });
+		if (!dashboard.canManageOrganization) throw redirect({ to: "/dashboard" });
 		const product = await getWorkspaceProduct({
 			data: { id: params.productId },
 		});

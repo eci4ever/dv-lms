@@ -72,7 +72,7 @@ export const Route = createFileRoute("/workspace/courses/$courseId")({
 	beforeLoad: async ({ params }) => {
 		const dashboard = await getDashboardSession();
 		if (!dashboard) throw redirect({ to: "/login" });
-		if (!dashboard.isOrganizationOwner) throw redirect({ to: "/dashboard" });
+		if (!dashboard.canManageOrganization) throw redirect({ to: "/dashboard" });
 		const [course, activeCategories] = await Promise.all([
 			getWorkspaceCourse({ data: { id: params.courseId } }),
 			listActiveCategories(),

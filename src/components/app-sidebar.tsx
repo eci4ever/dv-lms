@@ -59,6 +59,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "admin-overview"
 		| "admin-settings"
 		| "audit-log"
+		| "billing"
 		| "courses"
 		| "categories"
 		| "content"
@@ -70,6 +71,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "memberships"
 		| "organizations"
 		| "orders"
+		| "plans"
 		| "payouts"
 		| "admin-payouts"
 		| "purchases"
@@ -79,6 +81,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 		| "sales"
 		| "settings"
 		| "storefront"
+		| "subscriptions"
 		| "users";
 }
 
@@ -94,6 +97,9 @@ export function AppSidebar({
 }: AppSidebarProps) {
 	const isAdmin =
 		!isImpersonating && (user.role?.split(",").includes("admin") ?? false);
+	const canManageOrganization = Boolean(
+		isOrganizationOwner || organizationRole?.split(",").includes("admin"),
+	);
 	const isCreatorArea = [
 		"courses",
 		"customers",
@@ -124,7 +130,7 @@ export function AppSidebar({
 						activeOrganizationId={activeOrganizationId}
 						organizationRole={organizationRole}
 					/>
-					{isOrganizationOwner ? (
+					{canManageOrganization ? (
 						<div className="grid grid-cols-2 gap-1 rounded-lg bg-sidebar-accent/60 p-1 group-data-[collapsible=icon]:hidden">
 							<Button
 								render={<Link to="/library" />}
@@ -236,6 +242,20 @@ export function AppSidebar({
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											render={
+												<Link to="/workspace/billing">
+													<CreditCardIcon />
+													<span>Billing &amp; Plan</span>
+												</Link>
+											}
+											isActive={activeItem === "billing"}
+											tooltip="Billing and plan"
+										/>
+									</SidebarMenuItem>
+								) : null}
+								{canManageOrganization ? (
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
 												<Link to="/workspace/reviews">
 													<MessageSquareMoreIcon />
 													<span>Reviews</span>
@@ -246,7 +266,7 @@ export function AppSidebar({
 										/>
 									</SidebarMenuItem>
 								) : null}
-								{isOrganizationOwner ? (
+								{canManageOrganization ? (
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											render={
@@ -260,7 +280,7 @@ export function AppSidebar({
 										/>
 									</SidebarMenuItem>
 								) : null}
-								{isOrganizationOwner ? (
+								{canManageOrganization ? (
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											render={
@@ -274,7 +294,7 @@ export function AppSidebar({
 										/>
 									</SidebarMenuItem>
 								) : null}
-								{isOrganizationOwner ? (
+								{canManageOrganization ? (
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											render={
@@ -288,7 +308,7 @@ export function AppSidebar({
 										/>
 									</SidebarMenuItem>
 								) : null}
-								{isOrganizationOwner ? (
+								{canManageOrganization ? (
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											render={
@@ -302,7 +322,7 @@ export function AppSidebar({
 										/>
 									</SidebarMenuItem>
 								) : null}
-								{isOrganizationOwner ? (
+								{canManageOrganization ? (
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											render={
@@ -316,7 +336,7 @@ export function AppSidebar({
 										/>
 									</SidebarMenuItem>
 								) : null}
-								{isOrganizationOwner ? (
+								{canManageOrganization ? (
 									<SidebarMenuItem>
 										<SidebarMenuButton
 											render={
@@ -348,6 +368,30 @@ export function AppSidebar({
 											}
 											isActive={activeItem === "admin-overview"}
 											tooltip="Platform overview"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/plans">
+													<CreditCardIcon />
+													<span>Plans</span>
+												</Link>
+											}
+											isActive={activeItem === "plans"}
+											tooltip="Platform plans"
+										/>
+									</SidebarMenuItem>
+									<SidebarMenuItem>
+										<SidebarMenuButton
+											render={
+												<Link to="/admin/subscriptions">
+													<Building2Icon />
+													<span>Subscriptions</span>
+												</Link>
+											}
+											isActive={activeItem === "subscriptions"}
+											tooltip="Organization subscriptions"
 										/>
 									</SidebarMenuItem>
 									<SidebarMenuItem>

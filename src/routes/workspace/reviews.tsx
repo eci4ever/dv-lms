@@ -43,7 +43,7 @@ export const Route = createFileRoute("/workspace/reviews")({
 	beforeLoad: async () => {
 		const dashboard = await getDashboardSession();
 		if (!dashboard) throw redirect({ to: "/login" });
-		if (!dashboard.isOrganizationOwner) throw redirect({ to: "/dashboard" });
+		if (!dashboard.canManageOrganization) throw redirect({ to: "/dashboard" });
 		return dashboard;
 	},
 	loader: ({ deps }) => listWorkspaceReviews({ data: deps }),

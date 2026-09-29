@@ -837,6 +837,103 @@ export const platformSetting = sqliteTable("platform_setting", {
 		.notNull(),
 });
 
+export const platformPlan = sqliteTable(
+	"platform_plan",
+	{
+		id: text("id").primaryKey(),
+		slug: text("slug").notNull().unique(),
+		name: text("name").notNull(),
+		description: text("description").default("").notNull(),
+		status: text("status").default("draft").notNull(),
+		monthlyPriceInSen: integer("monthly_price_in_sen").default(0).notNull(),
+		yearlyPriceInSen: integer("yearly_price_in_sen").default(0).notNull(),
+		trialDays: integer("trial_days").default(0).notNull(),
+		maxPublishedCourses: integer("max_published_courses").default(1).notNull(),
+		maxProducts: integer("max_products").default(1).notNull(),
+		maxTeamMembers: integer("max_team_members").default(1).notNull(),
+		maxCustomers: integer("max_customers").default(100).notNull(),
+		analyticsRetentionDays: integer("analytics_retention_days")
+			.default(30)
+			.notNull(),
+		position: integer("position").default(0).notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("platformPlan_status_position_idx").on(table.status, table.position),
+	],
+);
+
+export const organizationSubscription = sqliteTable(
+	"organization_subscription",
+	{
+		id: text("id").primaryKey(),
+		organizationId: text("organization_id")
+			.notNull()
+			.unique()
+			.references(() => organization.id, { onDelete: "cascade" }),
+		planId: text("plan_id")
+			.notNull()
+			.references(() => platformPlan.id, { onDelete: "restrict" }),
+		billingOwnerId: text("billing_owner_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "restrict" }),
+		status: text("status").default("active").notNull(),
+		billingInterval: text("billing_interval").default("month").notNull(),
+		priceInSenSnapshot: integer("price_in_sen_snapshot").default(0).notNull(),
+		planSnapshot: text("plan_snapshot").default("{}").notNull(),
+		currentPeriodStart: integer("current_period_start", {
+			mode: "timestamp_ms",
+		}).notNull(),
+		currentPeriodEnd: integer("current_period_end", {
+			mode: "timestamp_ms",
+		}).notNull(),
+		cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" })
+			.default(false)
+			.notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+		updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.$onUpdate(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("organizationSubscription_plan_idx").on(table.planId),
+		index("organizationSubscription_status_idx").on(table.status),
+	],
+);
+
+export const organizationSubscriptionEvent = sqliteTable(
+	"organization_subscription_event",
+	{
+		id: text("id").primaryKey(),
+		subscriptionId: text("subscription_id")
+			.notNull()
+			.references(() => organizationSubscription.id, { onDelete: "cascade" }),
+		type: text("type").notNull(),
+		actorId: text("actor_id").references(() => user.id, {
+			onDelete: "set null",
+		}),
+		metadata: text("metadata").default("{}").notNull(),
+		createdAt: integer("created_at", { mode: "timestamp_ms" })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull(),
+	},
+	(table) => [
+		index("organizationSubscriptionEvent_subscription_idx").on(
+			table.subscriptionId,
+			table.createdAt,
+		),
+	],
+);
+
 export const creatorApplication = sqliteTable(
 	"creator_application",
 	{

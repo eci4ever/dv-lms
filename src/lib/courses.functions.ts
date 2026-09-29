@@ -13,6 +13,7 @@ import {
 	type CourseSectionInput,
 	courseLevels,
 } from "@/lib/course-types";
+import { requireOrganizationPlanCapacity } from "@/lib/organization-plan.server";
 import { requireApprovedCreator } from "@/lib/platform.server";
 
 const db = drizzle(env.DB, { schema });
@@ -220,8 +221,10 @@ async function requireOwner() {
 	const role = organization?.members.find(
 		(member) => member.userId === context.session.user.id,
 	)?.role;
-	if (!role?.split(",").includes("owner")) {
-		throw new Error("Organization owner access is required.");
+	if (
+		!role?.split(",").some((value) => value === "owner" || value === "admin")
+	) {
+		throw new Error("Organization administrator access is required.");
 	}
 	return context;
 }
@@ -451,6 +454,10 @@ export const publishCourse = createServerFn({ method: "POST" })
 			);
 		if (course.status !== "draft")
 			throw new Error("Only draft courses can be published.");
+		await requireOrganizationPlanCapacity(
+			course.organizationId,
+			"publishedCourses",
+		);
 		if (!course.summary || !course.description || !course.thumbnailUrl) {
 			throw new Error(
 				"Add a summary, description, and thumbnail before publishing.",

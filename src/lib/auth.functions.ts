@@ -35,6 +35,10 @@ export const getDashboardSession = createServerFn({ method: "GET" }).handler(
 		)?.role;
 		const isOrganizationOwner =
 			organizationRole?.split(",").includes("owner") ?? false;
+		const canManageOrganization =
+			organizationRole
+				?.split(",")
+				.some((role) => role === "owner" || role === "admin") ?? false;
 
 		return {
 			session: {
@@ -50,6 +54,7 @@ export const getDashboardSession = createServerFn({ method: "GET" }).handler(
 			activeOrganizationId,
 			organizationRole,
 			isOrganizationOwner,
+			canManageOrganization,
 		};
 	},
 );

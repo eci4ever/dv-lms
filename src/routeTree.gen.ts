@@ -28,8 +28,10 @@ import { Route as AdminCreatorsRouteImport } from './routes/admin/creators'
 import { Route as AdminOrdersRouteImport } from './routes/admin/orders'
 import { Route as AdminOrganizationsRouteImport } from './routes/admin/organizations'
 import { Route as AdminPayoutsRouteImport } from './routes/admin/payouts'
+import { Route as AdminPlansRouteImport } from './routes/admin/plans'
 import { Route as AdminReviewsRouteImport } from './routes/admin/reviews'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiAnalyticsRouteImport } from './routes/api/analytics'
 import { Route as CheckoutOrderIdRouteImport } from './routes/checkout/$orderId'
@@ -37,6 +39,7 @@ import { Route as CoursesIndexRouteImport } from './routes/courses/index'
 import { Route as CoursesSlugRouteImport } from './routes/courses/$slug'
 import { Route as CreatorsSlugRouteImport } from './routes/creators/$slug'
 import { Route as LearningIndexRouteImport } from './routes/learning/index'
+import { Route as WorkspaceBillingRouteImport } from './routes/workspace/billing'
 import { Route as WorkspaceCustomersRouteImport } from './routes/workspace/customers'
 import { Route as WorkspacePayoutsRouteImport } from './routes/workspace/payouts'
 import { Route as WorkspaceReviewsRouteImport } from './routes/workspace/reviews'
@@ -147,6 +150,11 @@ const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
   path: '/admin/payouts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPlansRoute = AdminPlansRouteImport.update({
+  id: '/admin/plans',
+  path: '/admin/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminReviewsRoute = AdminReviewsRouteImport.update({
   id: '/admin/reviews',
   path: '/admin/reviews',
@@ -155,6 +163,11 @@ const AdminReviewsRoute = AdminReviewsRouteImport.update({
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/admin/settings',
   path: '/admin/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSubscriptionsRoute = AdminSubscriptionsRouteImport.update({
+  id: '/admin/subscriptions',
+  path: '/admin/subscriptions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -190,6 +203,11 @@ const CreatorsSlugRoute = CreatorsSlugRouteImport.update({
 const LearningIndexRoute = LearningIndexRouteImport.update({
   id: '/learning/',
   path: '/learning/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceBillingRoute = WorkspaceBillingRouteImport.update({
+  id: '/workspace/billing',
+  path: '/workspace/billing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceCustomersRoute = WorkspaceCustomersRouteImport.update({
@@ -286,13 +304,16 @@ export interface FileRoutesByFullPath {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
+  '/workspace/billing': typeof WorkspaceBillingRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
   '/workspace/payouts': typeof WorkspacePayoutsRoute
   '/workspace/reviews': typeof WorkspaceReviewsRoute
@@ -330,13 +351,16 @@ export interface FileRoutesByTo {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
+  '/workspace/billing': typeof WorkspaceBillingRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
   '/workspace/payouts': typeof WorkspacePayoutsRoute
   '/workspace/reviews': typeof WorkspaceReviewsRoute
@@ -375,13 +399,16 @@ export interface FileRoutesById {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/organizations': typeof AdminOrganizationsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/analytics': typeof ApiAnalyticsRoute
   '/checkout/$orderId': typeof CheckoutOrderIdRoute
   '/courses/$slug': typeof CoursesSlugRoute
   '/creators/$slug': typeof CreatorsSlugRoute
+  '/workspace/billing': typeof WorkspaceBillingRoute
   '/workspace/customers': typeof WorkspaceCustomersRoute
   '/workspace/payouts': typeof WorkspacePayoutsRoute
   '/workspace/reviews': typeof WorkspaceReviewsRoute
@@ -421,13 +448,16 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/payouts'
+    | '/admin/plans'
     | '/admin/reviews'
     | '/admin/settings'
+    | '/admin/subscriptions'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
+    | '/workspace/billing'
     | '/workspace/customers'
     | '/workspace/payouts'
     | '/workspace/reviews'
@@ -465,13 +495,16 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/payouts'
+    | '/admin/plans'
     | '/admin/reviews'
     | '/admin/settings'
+    | '/admin/subscriptions'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
+    | '/workspace/billing'
     | '/workspace/customers'
     | '/workspace/payouts'
     | '/workspace/reviews'
@@ -509,13 +542,16 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/organizations'
     | '/admin/payouts'
+    | '/admin/plans'
     | '/admin/reviews'
     | '/admin/settings'
+    | '/admin/subscriptions'
     | '/admin/users'
     | '/api/analytics'
     | '/checkout/$orderId'
     | '/courses/$slug'
     | '/creators/$slug'
+    | '/workspace/billing'
     | '/workspace/customers'
     | '/workspace/payouts'
     | '/workspace/reviews'
@@ -554,13 +590,16 @@ export interface RootRouteChildren {
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminOrganizationsRoute: typeof AdminOrganizationsRoute
   AdminPayoutsRoute: typeof AdminPayoutsRoute
+  AdminPlansRoute: typeof AdminPlansRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   ApiAnalyticsRoute: typeof ApiAnalyticsRoute
   CheckoutOrderIdRoute: typeof CheckoutOrderIdRoute
   CoursesSlugRoute: typeof CoursesSlugRoute
   CreatorsSlugRoute: typeof CreatorsSlugRoute
+  WorkspaceBillingRoute: typeof WorkspaceBillingRoute
   WorkspaceCustomersRoute: typeof WorkspaceCustomersRoute
   WorkspacePayoutsRoute: typeof WorkspacePayoutsRoute
   WorkspaceReviewsRoute: typeof WorkspaceReviewsRoute
@@ -715,6 +754,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPayoutsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/plans': {
+      id: '/admin/plans'
+      path: '/admin/plans'
+      fullPath: '/admin/plans'
+      preLoaderRoute: typeof AdminPlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/reviews': {
       id: '/admin/reviews'
       path: '/admin/reviews'
@@ -727,6 +773,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/settings'
       fullPath: '/admin/settings'
       preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/subscriptions': {
+      id: '/admin/subscriptions'
+      path: '/admin/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AdminSubscriptionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -776,6 +829,13 @@ declare module '@tanstack/react-router' {
       path: '/learning'
       fullPath: '/learning/'
       preLoaderRoute: typeof LearningIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace/billing': {
+      id: '/workspace/billing'
+      path: '/workspace/billing'
+      fullPath: '/workspace/billing'
+      preLoaderRoute: typeof WorkspaceBillingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspace/customers': {
@@ -898,13 +958,16 @@ const rootRouteChildren: RootRouteChildren = {
   AdminOrdersRoute: AdminOrdersRoute,
   AdminOrganizationsRoute: AdminOrganizationsRoute,
   AdminPayoutsRoute: AdminPayoutsRoute,
+  AdminPlansRoute: AdminPlansRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminSubscriptionsRoute: AdminSubscriptionsRoute,
   AdminUsersRoute: AdminUsersRoute,
   ApiAnalyticsRoute: ApiAnalyticsRoute,
   CheckoutOrderIdRoute: CheckoutOrderIdRoute,
   CoursesSlugRoute: CoursesSlugRoute,
   CreatorsSlugRoute: CreatorsSlugRoute,
+  WorkspaceBillingRoute: WorkspaceBillingRoute,
   WorkspaceCustomersRoute: WorkspaceCustomersRoute,
   WorkspacePayoutsRoute: WorkspacePayoutsRoute,
   WorkspaceReviewsRoute: WorkspaceReviewsRoute,

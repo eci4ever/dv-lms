@@ -2,6 +2,7 @@ import { createAccessControl } from "better-auth/plugins/access";
 import {
 	adminAc,
 	defaultStatements,
+	memberAc,
 	ownerAc,
 } from "better-auth/plugins/organization/access";
 
@@ -18,9 +19,7 @@ export const organizationAccessControl = createAccessControl(statement);
 export const assignableOrganizationRoles = [
 	"owner",
 	"admin",
-	"instructor",
-	"course_manager",
-	"student",
+	"member",
 ] as const;
 
 export type AssignableOrganizationRole =
@@ -36,25 +35,14 @@ const owner = organizationAccessControl.newRole({
 
 const admin = organizationAccessControl.newRole({
 	...adminAc.statements,
-	course: ["read"],
+	course: ["create", "read", "update", "delete", "publish"],
 	enrollment: ["read", "update"],
-	commerce: ["read"],
+	commerce: ["read", "update"],
 	analytics: ["read"],
 });
 
-const instructor = organizationAccessControl.newRole({
-	course: ["read"],
-	enrollment: ["read", "update"],
-	analytics: ["read"],
-});
-
-const courseManager = organizationAccessControl.newRole({
-	course: ["read"],
-	enrollment: ["read"],
-	analytics: ["read"],
-});
-
-const student = organizationAccessControl.newRole({
+const member = organizationAccessControl.newRole({
+	...memberAc.statements,
 	course: ["read"],
 	enrollment: ["read"],
 });
@@ -62,9 +50,7 @@ const student = organizationAccessControl.newRole({
 export const organizationRoles = {
 	owner,
 	admin,
-	instructor,
-	course_manager: courseManager,
-	student,
+	member,
 };
 
 export function formatRole(role: string) {
