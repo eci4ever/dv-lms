@@ -1,5 +1,6 @@
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { Link, useLocation } from "@tanstack/react-router";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import { PanelLeftIcon } from "lucide-react";
@@ -300,7 +301,223 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 	);
 }
 
-function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
+function SectionNavigation() {
+	const pathname = useLocation({ select: (location) => location.pathname });
+	const tabClass = (active: boolean) =>
+		cn(
+			"shrink-0 border-b-2 px-1 py-3 text-sm font-medium transition-colors",
+			active
+				? "border-primary text-foreground"
+				: "border-transparent text-muted-foreground hover:text-foreground",
+		);
+	const starts = (path: string) => pathname.startsWith(path);
+	let tabs: React.ReactNode = null;
+
+	if (pathname === "/purchases" || pathname === "/memberships") {
+		tabs = (
+			<>
+				<Link to="/purchases" className={tabClass(pathname === "/purchases")}>
+					Purchases
+				</Link>
+				<Link
+					to="/memberships"
+					className={tabClass(pathname === "/memberships")}
+				>
+					Memberships
+				</Link>
+			</>
+		);
+	} else if (
+		starts("/workspace/storefront") ||
+		starts("/workspace/courses") ||
+		starts("/workspace/products")
+	) {
+		tabs = (
+			<>
+				<Link
+					to="/workspace/storefront"
+					className={tabClass(starts("/workspace/storefront"))}
+				>
+					Storefront
+				</Link>
+				<Link
+					to="/workspace/courses"
+					className={tabClass(starts("/workspace/courses"))}
+				>
+					Courses
+				</Link>
+				<Link
+					to="/workspace/products"
+					className={tabClass(starts("/workspace/products"))}
+				>
+					Products
+				</Link>
+			</>
+		);
+	} else if (starts("/workspace/customers") || starts("/workspace/reviews")) {
+		tabs = (
+			<>
+				<Link
+					to="/workspace/customers"
+					className={tabClass(starts("/workspace/customers"))}
+				>
+					Customers
+				</Link>
+				<Link
+					to="/workspace/reviews"
+					className={tabClass(starts("/workspace/reviews"))}
+				>
+					Reviews
+				</Link>
+			</>
+		);
+	} else if (starts("/workspace/sales") || starts("/workspace/payouts")) {
+		tabs = (
+			<>
+				<Link
+					to="/workspace/sales"
+					className={tabClass(starts("/workspace/sales"))}
+				>
+					Sales
+				</Link>
+				<Link
+					to="/workspace/payouts"
+					className={tabClass(starts("/workspace/payouts"))}
+				>
+					Payouts
+				</Link>
+			</>
+		);
+	} else if (starts("/workspace/settings") || starts("/workspace/billing")) {
+		tabs = (
+			<>
+				<Link
+					to="/workspace/settings"
+					className={tabClass(starts("/workspace/settings"))}
+				>
+					Settings
+				</Link>
+				<Link
+					to="/workspace/billing"
+					className={tabClass(starts("/workspace/billing"))}
+				>
+					Billing &amp; plan
+				</Link>
+			</>
+		);
+	} else if (
+		starts("/admin/organizations") ||
+		starts("/admin/users") ||
+		starts("/admin/creators") ||
+		starts("/admin/subscriptions")
+	) {
+		tabs = (
+			<>
+				<Link
+					to="/admin/organizations"
+					className={tabClass(starts("/admin/organizations"))}
+				>
+					Organizations
+				</Link>
+				<Link to="/admin/users" className={tabClass(starts("/admin/users"))}>
+					Users
+				</Link>
+				<Link
+					to="/admin/creators"
+					search={{ query: "", status: "" }}
+					className={tabClass(starts("/admin/creators"))}
+				>
+					Creators
+				</Link>
+				<Link
+					to="/admin/subscriptions"
+					className={tabClass(starts("/admin/subscriptions"))}
+				>
+					Subscriptions
+				</Link>
+			</>
+		);
+	} else if (
+		starts("/admin/content") ||
+		starts("/admin/categories") ||
+		starts("/admin/reviews")
+	) {
+		tabs = (
+			<>
+				<Link
+					to="/admin/content"
+					className={tabClass(starts("/admin/content"))}
+				>
+					Content
+				</Link>
+				<Link
+					to="/admin/categories"
+					className={tabClass(starts("/admin/categories"))}
+				>
+					Categories
+				</Link>
+				<Link
+					to="/admin/reviews"
+					className={tabClass(starts("/admin/reviews"))}
+				>
+					Reviews
+				</Link>
+			</>
+		);
+	} else if (
+		starts("/admin/orders") ||
+		starts("/admin/payouts") ||
+		starts("/admin/plans")
+	) {
+		tabs = (
+			<>
+				<Link to="/admin/orders" className={tabClass(starts("/admin/orders"))}>
+					Orders
+				</Link>
+				<Link
+					to="/admin/payouts"
+					className={tabClass(starts("/admin/payouts"))}
+				>
+					Payouts
+				</Link>
+				<Link to="/admin/plans" className={tabClass(starts("/admin/plans"))}>
+					Plans
+				</Link>
+			</>
+		);
+	} else if (starts("/admin/audit-log") || starts("/admin/settings")) {
+		tabs = (
+			<>
+				<Link
+					to="/admin/audit-log"
+					search={{ query: "", action: "" }}
+					className={tabClass(starts("/admin/audit-log"))}
+				>
+					Audit log
+				</Link>
+				<Link
+					to="/admin/settings"
+					className={tabClass(starts("/admin/settings"))}
+				>
+					Settings
+				</Link>
+			</>
+		);
+	}
+
+	return tabs ? (
+		<nav className="flex min-h-12 gap-5 overflow-x-auto border-b px-4 sm:px-6 lg:px-8">
+			{tabs}
+		</nav>
+	) : null;
+}
+
+function SidebarInset({
+	className,
+	children,
+	...props
+}: React.ComponentProps<"main">) {
+	const [header, ...content] = React.Children.toArray(children);
 	return (
 		<main
 			data-slot="sidebar-inset"
@@ -309,7 +526,11 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
 				className,
 			)}
 			{...props}
-		/>
+		>
+			{header}
+			<SectionNavigation />
+			{content}
+		</main>
 	);
 }
 
