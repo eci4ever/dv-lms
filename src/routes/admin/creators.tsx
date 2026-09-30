@@ -7,7 +7,16 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
 	SidebarInset,
@@ -47,16 +56,25 @@ function AdminCreators() {
 	const navigate = Route.useNavigate();
 	const router = useRouter();
 	const [busy, setBusy] = useState<string | null>(null);
+	const [pendingAction, setPendingAction] = useState<{
+		id: string;
+		action: "approve" | "reject" | "suspend" | "reactivate";
+		organizationName: string;
+	} | null>(null);
+	const [reason, setReason] = useState("");
 	async function act(
 		id: string,
 		action: "approve" | "reject" | "suspend" | "reactivate",
+		reason: string,
 	) {
-		const reason = window.prompt(`Reason to ${action} this creator:`)?.trim();
-		if (!reason) return;
 		setBusy(id);
 		try {
-			await decideCreatorApplication({ data: { id, action, reason } });
+			await decideCreatorApplication({
+				data: { id, action, reason: reason.trim() },
+			});
 			toast.success(`Creator ${action} action completed.`);
+			setPendingAction(null);
+			setReason("");
 			await router.invalidate({ sync: true });
 		} catch (error) {
 			toast.error(
@@ -65,6 +83,14 @@ function AdminCreators() {
 		} finally {
 			setBusy(null);
 		}
+	}
+	function openAction(
+		id: string,
+		action: "approve" | "reject" | "suspend" | "reactivate",
+		organizationName: string,
+	) {
+		setReason("");
+		setPendingAction({ id, action, organizationName });
 	}
 	return (
 		<SidebarProvider>
@@ -153,14 +179,26 @@ function AdminCreators() {
 												<>
 													<Button
 														disabled={busy === item.id}
-														onClick={() => act(item.id, "approve")}
+														onClick={() =>
+															openAction(
+																item.id,
+																"approve",
+																item.organizationName,
+															)
+														}
 													>
 														Approve
 													</Button>
 													<Button
 														variant="destructive"
 														disabled={busy === item.id}
-														onClick={() => act(item.id, "reject")}
+														onClick={() =>
+															openAction(
+																item.id,
+																"reject",
+																item.organizationName,
+															)
+														}
 													>
 														Reject
 													</Button>
@@ -169,14 +207,26 @@ function AdminCreators() {
 												<Button
 													variant="destructive"
 													disabled={busy === item.id}
-													onClick={() => act(item.id, "suspend")}
+													onClick={() =>
+														openAction(
+															item.id,
+															"suspend",
+															item.organizationName,
+														)
+													}
 												>
 													Suspend
 												</Button>
 											) : item.status === "suspended" ? (
 												<Button
 													disabled={busy === item.id}
-													onClick={() => act(item.id, "reactivate")}
+													onClick={() =>
+														openAction(
+															item.id,
+															"reactivate",
+															item.organizationName,
+														)
+													}
 												>
 													Reactivate
 												</Button>
@@ -196,6 +246,52 @@ function AdminCreators() {
 					</div>
 				</main>
 			</SidebarInset>
+			<Dialog
+				open={Boolean(pendingAction)}
+				onOpenChange={(open) => {
+					if (!open && !busy) setPendingAction(null);
+				}}
+			>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle className="capitalize">
+							{pendingAction?.action} creator
+						</DialogTitle>
+						<DialogDescription>
+							Record the reason for this decision on{" "}
+							{pendingAction?.organizationName}.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-2">
+						<Label htmlFor="creator-decision-reason">Reason</Label>
+						<Input
+							id="creator-decision-reason"
+							value={reason}
+							onChange={(event) => setReason(event.target.value)}
+							placeholder="Enter a clear audit reason"
+							autoFocus
+						/>
+					</div>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setPendingAction(null)}
+							disabled={Boolean(busy)}
+						>
+							Cancel
+						</Button>
+						<Button
+							onClick={() => {
+								if (pendingAction)
+									void act(pendingAction.id, pendingAction.action, reason);
+							}}
+							disabled={!reason.trim() || Boolean(busy)}
+						>
+							Confirm
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</SidebarProvider>
 	);
 }
